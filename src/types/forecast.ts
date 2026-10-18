@@ -54,8 +54,12 @@ export interface ForecastAccuracy {
   measuredDays: number;
   /** Station-days behind those percentages — the sample size, not the number of days. */
   measuredPoints: number;
-  /** Average absolute gap between the day-ahead forecast and what happened, percent. */
+  /** Average absolute gap between the day-ahead forecast and what happened, percent, on days the station worked. */
   mapePct: number | null;
+  /** The same average with breakdown days included (older backends omit it). */
+  mapeAllPct?: number | null;
+  /** Station-days left out of mapePct because the station broke down (made under a quarter of its promise). */
+  breakdownPoints?: number;
   /** Positive = the forecast runs high. */
   biasPct: number | null;
   /** What the formula gets wrong even with perfect weather, percent. */
@@ -73,4 +77,21 @@ export interface ForecastSummary {
   next15: ForecastTotals;
   perDay: ForecastDay[];
   accuracy?: ForecastAccuracy;
+}
+
+/** One station's output against what it was sold to produce (kWp x promised kWh/kWp/yr). */
+export interface StationPlanReport {
+  provider: 'hopecloud' | 'soliscloud' | 'huawei' | 'fsolar';
+  stationId: string;
+  stationName: string | null;
+  kwp: number;
+  yieldKwhPerKwp: number;
+  yieldIsDefault: boolean;
+  yearlyPromiseKwh: number;
+  days: number;
+  promisedKwh: number;
+  actualKwh: number;
+  deliveredPct: number | null;
+  workingPct: number | null;
+  breakdownDays: number;
 }

@@ -22,6 +22,7 @@ export const MAINTAINER_USER_ID = 14;
 export const PAGE_STATUS: Record<string, PageStatus> = {
   "/admin": { health: "ok", note: "Umumiy raqamlar, daromad va prognoz to'g'ri chiqadi." },
   "/admin/availability": { health: "ok", note: "Ishlash foizi va uzilishlar, 10-sentabrdan beri." },
+  "/admin/plan": { health: "ok", note: "Har stansiya: va'da qilingan yillik ishlab chiqarish va haqiqiy (Status_V 2.0.xlsx)." },
   "/admin/temperature": { health: "ok", note: "Uchala vendor haroratlari va ogohlantirish chegaralari." },
   "/admin/users": { health: "ok", note: "Foydalanuvchilar ro'yxati va tahrirlash." },
   "/admin/user-stations": { health: "ok", note: "Biriktirish ishlaydi; ro'yxatlar bazadan, tez yuklanadi." },

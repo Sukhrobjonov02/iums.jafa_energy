@@ -4,6 +4,7 @@ import type {
   ForecastHistoryDay,
   ForecastSummary,
   StationForecast,
+  StationPlanReport,
 } from '../types/forecast';
 
 const BASE_URL = '/api/forecast';
@@ -45,6 +46,14 @@ class ForecastService {
   /** Day by day: what was predicted for each finished day and what actually happened. */
   async getHistory(windowDays = 30): Promise<ForecastHistoryDay[]> {
     const response = await apiClient.get<{ data: ForecastHistoryDay[] }>(`${BASE_URL}/history`, {
+      params: { windowDays },
+    });
+    return response.data.data;
+  }
+
+  /** Each station's output against its promised yield over the last `windowDays` finished days. */
+  async getPlan(windowDays = 30): Promise<StationPlanReport[]> {
+    const response = await apiClient.get<{ data: StationPlanReport[] }>(`${BASE_URL}/plan`, {
       params: { windowDays },
     });
     return response.data.data;

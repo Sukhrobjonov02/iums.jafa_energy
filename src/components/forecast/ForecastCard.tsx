@@ -123,7 +123,13 @@ const ForecastCard: React.FC<ForecastCardProps> = ({ compact = false }) => {
   const accuracyTag = !acc ? null : acc.measuredDays > 0 && acc.mapePct !== null ? (
     <Tooltip
       title={
-        `Oxirgi ${acc.windowDays} kunda ${acc.measuredDays} ta kun tekshirildi. ` +
+        `Oxirgi ${acc.windowDays} kunda ${acc.measuredDays} ta kun tekshirildi, stansiya ishlagan kunlar bo'yicha. ` +
+        (acc.breakdownPoints
+          ? `${acc.breakdownPoints} ta stansiya-kun buzilish sababli hisobga olinmadi (stansiya va'da qilinganining ` +
+            `choragidan kam bergan; buni ob-havo prognozi oldindan bila olmaydi)` +
+            (acc.mapeAllPct !== null && acc.mapeAllPct !== undefined ? `, ular bilan xato ${acc.mapeAllPct}%` : '') +
+            '. '
+          : '') +
         `O'rtacha ${acc.biasPct !== null && acc.biasPct > 0 ? 'yuqori' : 'past'} bashorat: ` +
         `${acc.biasPct !== null ? Math.abs(acc.biasPct).toFixed(1) : '-'}%.` +
         (acc.modelErrorPct !== null ? ` Formulaning o'z xatosi ${acc.modelErrorPct}%.` : '')

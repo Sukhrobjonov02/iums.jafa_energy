@@ -46,6 +46,12 @@ const AdminLayout: React.FC = () => {
           label: "Invertor harorati",
           onClick: () => navigate("/admin/temperature"),
         },
+        {
+          key: "/admin/plan",
+          icon: <BarChartOutlined />,
+          label: "Reja va haqiqat",
+          onClick: () => navigate("/admin/plan"),
+        },
         // Hidden - Not yet implemented
         // {
         //   key: "/admin/sites",
