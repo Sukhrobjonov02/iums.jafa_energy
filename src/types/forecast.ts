@@ -1,4 +1,4 @@
-export type ForecastProvider = 'hopecloud' | 'soliscloud' | 'fsolar';
+export type ForecastProvider = 'hopecloud' | 'soliscloud' | 'fsolar' | 'huawei';
 export type ForecastConfidence = 'high' | 'medium';
 /** "measured" = worked out from this station's own output, "default" = the configured guess. */
 export type PerformanceRatioSource = 'measured' | 'default';
@@ -94,4 +94,15 @@ export interface StationPlanReport {
   deliveredPct: number | null;
   workingPct: number | null;
   breakdownDays: number;
+}
+
+/** One station's page: its past days against the forecast, the forecast's accuracy and its promise. */
+export interface StationInsight {
+  provider: ForecastProvider;
+  stationId: string;
+  windowDays: number;
+  pricePerKwhUzs: number;
+  history: (ForecastHistoryDay & { promisedKwh: number | null; breakdown: boolean })[];
+  accuracy: ForecastAccuracy;
+  plan: StationPlanReport | null;
 }

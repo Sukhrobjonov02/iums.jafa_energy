@@ -73,6 +73,7 @@ import HopeCloudStationHistory from '../../../components/HopeCloudStationHistory
 import HopeCloudEquipmentHistory from '../../../components/HopeCloudEquipmentHistory';
 import DataAsOf from '../../../components/DataAsOf';
 import { withGap } from '../../../components/maintainer/with-gap';
+import StationInsightCard from '../../../components/forecast/StationInsightCard';
 import {
   alarmGradeLabel,
   alarmTypeLabel,
@@ -1971,6 +1972,22 @@ const HopeCloudManagement: React.FC = () => {
                   ) : (
                     <Empty description="No devices found for this station" />
                   ),
+                },
+                {
+                  key: 'money',
+                  label: 'Daromad va prognoz',
+                  children: selectedStation ? (
+                    <StationInsightCard
+                      provider="hopecloud"
+                      stationId={String(selectedStation.id)}
+                      energy={{
+                        todayKwh: toNumber(selectedStation.todayKwh),
+                        monthKwh: toNumber(selectedStation.monKwh),
+                        yearKwh: toNumber(selectedStation.yearKwh),
+                        totalKwh: toNumber(selectedStation.sumKwh),
+                      }}
+                    />
+                  ) : null,
                 },
                 {
                   key: 'realtime',

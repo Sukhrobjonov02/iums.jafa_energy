@@ -21,6 +21,10 @@ import {
   type HuaweiSyncRun,
 } from "../../../service/huawei.service";
 import { formatKwh } from "../../../helpers/currency";
+import StationInsightCard from "../../../components/forecast/StationInsightCard";
+
+/** Stored figures arrive as numeric strings. */
+const num = (v: string | number | null | undefined): number | null => (v === null || v === undefined || v === "" ? null : Number(v));
 
 const { Text } = Typography;
 const TASHKENT_MS = 5 * 3_600_000;
@@ -277,6 +281,11 @@ const HuaweiStations: React.FC = () => {
             expandable={{
               expandedRowRender: (s) => (
                 <div style={{ display: "grid", gap: 12 }}>
+                  <StationInsightCard
+                    provider="huawei"
+                    stationId={s.plantCode}
+                    energy={{ todayKwh: num(s.dayKwh), monthKwh: num(s.monthKwh), yearKwh: num(s.yearKwh), totalKwh: num(s.totalKwh) }}
+                  />
                   {s.activeAlarms?.length ? (
                     <Table<HuaweiAlarmRow>
                       size="small"

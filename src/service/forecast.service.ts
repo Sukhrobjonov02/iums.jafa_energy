@@ -5,6 +5,7 @@ import type {
   ForecastSummary,
   StationForecast,
   StationPlanReport,
+  StationInsight,
 } from '../types/forecast';
 
 const BASE_URL = '/api/forecast';
@@ -48,6 +49,15 @@ class ForecastService {
     const response = await apiClient.get<{ data: ForecastHistoryDay[] }>(`${BASE_URL}/history`, {
       params: { windowDays },
     });
+    return response.data.data;
+  }
+
+  /** One station's past days against the forecast, the forecast's accuracy for it and its promise. */
+  async getStationInsight(provider: string, stationId: string, windowDays = 30): Promise<StationInsight> {
+    const response = await apiClient.get<{ data: StationInsight }>(
+      `${BASE_URL}/${provider}/${encodeURIComponent(stationId)}/insight`,
+      { params: { windowDays } },
+    );
     return response.data.data;
   }
 

@@ -30,6 +30,7 @@ import solisCloudService from '../../../service/soliscloud.service';
 import DataAsOf from '../../../components/DataAsOf';
 import type { StationDetail, InverterDetail, CollectorDetail } from '../../../types/soliscloud';
 import { withGap } from '../../../components/maintainer/with-gap';
+import StationInsightCard from '../../../components/forecast/StationInsightCard';
 
 const { Title, Text } = Typography;
 
@@ -526,6 +527,14 @@ const StationDetailPage: React.FC = () => {
           <Descriptions.Item label="Peak Power Today">{peakPowerToday !== undefined && peakPowerToday > 0 ? `${peakPowerToday.toFixed(2)} kW` : '-'}</Descriptions.Item>
         </Descriptions>
       </Card>
+
+      {id && (
+        <StationInsightCard
+          provider="soliscloud"
+          stationId={id}
+          energy={{ todayKwh: detail.eToday, monthKwh: detail.eMonth, yearKwh: detail.eYear, totalKwh: detail.eTotal }}
+        />
+      )}
 
       {/* Revenue & Performance: the vendor's own income at the portal price (0 on every station). */}
       <Card title={<Space><DashboardOutlined />{withGap('Revenue & Performance', 'solisRevenue')}</Space>} style={{ marginBottom: 16 }}>
