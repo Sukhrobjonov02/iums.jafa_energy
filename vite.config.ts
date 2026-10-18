@@ -32,7 +32,6 @@ export default defineConfig({
           // React core
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           // UI libraries
-          'antd-vendor': ['antd', '@ant-design/charts', '@ant-design/v5-patch-for-react-19'],
           // Charts
           'charts-vendor': ['recharts'],
           // State management and data fetching

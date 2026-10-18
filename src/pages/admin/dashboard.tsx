@@ -31,7 +31,6 @@ import {
   CheckCircleOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { Column, Pie } from '@ant-design/charts';
 import { unifiedSolarService } from '../../service/unified-solar.service';
 import type { UnifiedSolarSummary, UnifiedSolarData } from '../../service/unified-solar.service';
 import { hopeCloudService } from '../../service/hopecloud.service';
