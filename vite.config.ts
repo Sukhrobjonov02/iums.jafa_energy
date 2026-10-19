@@ -32,8 +32,6 @@ export default defineConfig({
           // React core
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           // UI libraries
-          // Charts
-          'charts-vendor': ['recharts'],
           // State management and data fetching
           'data-vendor': ['@tanstack/react-query', 'zustand', 'axios'],
           // Utilities
