@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [main, master]
 
+# id-token lets the job assume the AWS role github-actions-ecr-push without any stored key.
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  IMAGE: 894665396429.dkr.ecr.eu-north-1.amazonaws.com/erp-frontend
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -23,30 +31,54 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+      # A pull request only builds; publishing and deploying happen on a push to master. The
+      # workflow used to deploy pull requests too, i.e. put unmerged code on the live site.
+      - name: Build (pull request check)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          context: .
+          push: false
+          cache-from: type=gha
+
+      # Images live in the company's own AWS account (ECR, eu-north-1) since 2026-10-19; before
+      # that they were on the previous developer's Docker Hub account.
+      - name: Configure AWS credentials
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::894665396429:role/github-actions-ecr-push
+          aws-region: eu-north-1
+
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push'
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker image
+        if: github.event_name == 'push'
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/erp-frontend:latest
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to AWS Lightsail
+      - name: Deploy to the server
+        if: github.event_name == 'push'
         uses: appleboy/ssh-action@master
+        env:
+          IMAGE: ${{ env.IMAGE }}
         with:
+          envs: IMAGE
           host: ${{ secrets.LIGHTSAIL_HOST }}
           username: ${{ secrets.LIGHTSAIL_USERNAME }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script: |
-            # Pull latest image
-            docker pull ${{ secrets.DOCKER_USERNAME }}/erp-frontend:latest
+            # Pull the new image; the server signs in to ECR with its IAM role (credential helper)
+            docker pull ${IMAGE}:latest
 
             # Stop and remove old container
             docker stop erp-frontend || true
@@ -61,7 +93,7 @@ jobs:
               --name erp-frontend \
               --restart unless-stopped \
               -p 172.17.0.1:5000:5000 \
-              ${{ secrets.DOCKER_USERNAME }}/erp-frontend:latest
+              ${IMAGE}:latest
 
             # The port is no longer reachable from the runner, so check it from the server.
             sleep 5
@@ -74,6 +106,7 @@ jobs:
             docker ps
 
       - name: Verify deployment
+        if: github.event_name == 'push'
         run: |
           # Check the path real users take (nginx -> erp-frontend), not the raw container port:
           # that port is bound to the docker bridge gateway and is unreachable from here.
