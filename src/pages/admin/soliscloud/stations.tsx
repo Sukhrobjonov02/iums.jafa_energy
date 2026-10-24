@@ -292,7 +292,7 @@ const SolisCloudStations: React.FC = () => {
           <Col>
             <Space size="large">
               {useDbSource && <DataAsOf label="Synced" timestamp={lastSyncedAt} />}
-              <Tooltip title={useDbSource ? "Switch to live SolisCloud API" : "Switch to stored data (synced every 5 min)"}>
+              <Tooltip title={useDbSource ? "Switch to live SolisCloud API" : "Switch to stored data (synced every hour)"}>
                 <Space>
                   <CloudOutlined style={{ color: useDbSource ? '#bfbfbf' : '#52c41a' }} />
                   <Switch
