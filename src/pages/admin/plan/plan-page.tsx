@@ -5,6 +5,7 @@ import { forecastService } from '../../../service/forecast.service';
 import type { StationPlanReport } from '../../../types/forecast';
 import type { VendorKey } from '../../../types/availability';
 import { providerTag } from '../availability/provider-tag';
+import PlanMonthlyChart from './plan-monthly-chart';
 
 const { Text, Paragraph, Title } = Typography;
 
@@ -152,6 +153,10 @@ const PlanPage: React.FC = () => {
             </Card>
           </Col>
         </Row>
+
+        <div style={{ marginTop: 16 }}>
+          <PlanMonthlyChart />
+        </div>
 
         <Card size="small" style={{ marginTop: 16 }}>
           {rows && rows.length === 0 ? (

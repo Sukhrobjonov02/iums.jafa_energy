@@ -5,6 +5,7 @@ import type {
   ForecastSummary,
   StationForecast,
   StationPlanReport,
+  StationPlanYear,
   StationInsight,
 } from '../types/forecast';
 
@@ -65,6 +66,13 @@ class ForecastService {
   async getPlan(windowDays = 30): Promise<StationPlanReport[]> {
     const response = await apiClient.get<{ data: StationPlanReport[] }>(`${BASE_URL}/plan`, {
       params: { windowDays },
+    });
+    return response.data.data;
+  }
+
+  async getPlanMonthly(year: number): Promise<StationPlanYear[]> {
+    const response = await apiClient.get<{ data: StationPlanYear[] }>(`${BASE_URL}/plan/monthly`, {
+      params: { year },
     });
     return response.data.data;
   }
