@@ -91,7 +91,7 @@ const PlanMonthlyChart: React.FC = () => {
           <Select
             value={year}
             onChange={setYear}
-            options={[thisYear - 1, thisYear].map((y) => ({ value: y, label: String(y) }))}
+            options={[thisYear - 2, thisYear - 1, thisYear].map((y) => ({ value: y, label: String(y) }))}
           />
         </Space>
       }
