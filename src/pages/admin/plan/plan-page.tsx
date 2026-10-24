@@ -177,8 +177,9 @@ const PlanPage: React.FC = () => {
       <Paragraph type="secondary" style={{ fontSize: 13, margin: 0 }}>
         Reja: panel quvvati (kWp) × o'rnatishda va'da qilingan yillik ishlab chiqarish (kWh/kWp), oylarga JAFA'ning
         hisob jadvalidagi ulush bo'yicha taqsimlangan (iyulda eng ko'p, dekabrda eng kam). Ma'lumot: Status_V 2.0.xlsx.
-        Faqat haqiqiy ishlab chiqarishi yozilgan kunlar hisoblanadi, shuning uchun bizning tizimimiz ishlamagan kunlar
-        (masalan, 16–18 oktabr) stansiya aybiga yozilmaydi. "Ishlagan kunlarda" ustuni buzilish kunlarini chiqarib
+        Kunlar vendorning o'z kunlik hisobotidan olinadi va har kuni qayta yuklanadi, shuning uchun bizning tizimimiz
+        ishlamagan kunlar (masalan, 16–18 oktabr) ham to'ldiriladi. Vendor 0 kWh yoki umuman ma'lumot ko'rsatmagan kun
+        stansiya ishlamagan kun hisoblanadi va buzilish kuniga qo'shiladi. "Ishlagan kunlarda" ustuni buzilish kunlarini chiqarib
         tashlaydi: u stansiya ishlaganda va'da qilinganini beryaptimi, degan savolga javob. 70% dan past bo'lsa,
         panellar, string yoki invertor sozlamasini joyida tekshirish kerak. Bu reja prognozga qo'shilmagan: sinovda u
         kunlik prognoz sifatida ob-havo modelidan ancha yomon chiqdi.
