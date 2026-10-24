@@ -93,7 +93,13 @@ export interface StationPlanReport {
   actualKwh: number;
   deliveredPct: number | null;
   workingPct: number | null;
+  /** "counters": the window's energy is the inverters' counter growth; "daily": the daily report's sum. */
+  actualSource?: 'counters' | 'daily';
   breakdownDays: number;
+  /** Days the vendor reported 0 or nothing while the inverter counters grew: worked, datalogger silent. */
+  silentDays?: number;
+  /** Days nothing is known about; left out of the percentages. */
+  noDataDays?: number;
 }
 
 /** One planned station's year by calendar month; `actualKwh` is null where no figure is held. */
