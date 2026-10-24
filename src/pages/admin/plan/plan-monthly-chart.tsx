@@ -39,22 +39,33 @@ const PlanMonthlyChart: React.FC = () => {
 
   const data = useMemo(() => {
     const picked = (rows ?? []).filter((r) => station === ALL || keyOf(r) === station);
+    // A month's plan bar covers the same stations as its actual bar: with "Hammasi", a station we
+    // hold no figure for that month would otherwise inflate the plan against a smaller actual.
     return MONTHS.map((name, i) => {
-      let plan = 0;
+      let planAll = 0;
+      let planMeasured = 0;
       let actual: number | null = null;
       for (const r of picked) {
         const m = r.months[i];
-        plan += m.planKwh;
-        if (m.actualKwh !== null) actual = (actual ?? 0) + m.actualKwh;
+        planAll += m.planKwh;
+        if (m.actualKwh !== null) {
+          planMeasured += m.planKwh;
+          actual = (actual ?? 0) + m.actualKwh;
+        }
       }
-      return { name, plan: Math.round(plan), actual: actual === null ? null : Math.round(actual) };
+      return {
+        name,
+        plan: Math.round(actual === null ? planAll : planMeasured),
+        planAll: Math.round(planAll),
+        actual: actual === null ? null : Math.round(actual),
+      };
     });
   }, [rows, station]);
 
   // The year's promise in full; the comparison only over the months that have a measured figure.
   const totals = useMemo(() => {
     const measured = data.filter((d) => d.actual !== null);
-    const year = data.reduce((a, d) => a + d.plan, 0);
+    const year = data.reduce((a, d) => a + d.planAll, 0);
     const plan = measured.reduce((a, d) => a + d.plan, 0);
     const actual = measured.reduce((a, d) => a + (d.actual ?? 0), 0);
     return { year, plan, actual, months: measured.length, pct: plan > 0 ? (actual / plan) * 100 : null };
@@ -94,7 +105,7 @@ const PlanMonthlyChart: React.FC = () => {
             <Text type="secondary">
               {year} yil rejasi {fmt(totals.year)}.{' '}
               {totals.months > 0 &&
-                `Ma'lumoti bor ${totals.months} oyda: reja ${fmt(totals.plan)}, haqiqiy ${fmt(totals.actual)}` +
+                `Ma'lumoti bor ${totals.months} oyda, o'sha stansiyalar bo'yicha: reja ${fmt(totals.plan)}, haqiqiy ${fmt(totals.actual)}` +
                   (totals.pct === null ? '' : ` (${totals.pct.toFixed(1)}%)`)}
             </Text>
             <div style={{ width: '100%', height: 340, marginTop: 8 }}>
