@@ -72,7 +72,19 @@ const PlanPage: React.FC = () => {
       ),
     },
     { title: 'Reja (davr)', dataIndex: 'promisedKwh', align: 'right', render: (v: number) => kwh(v) },
-    { title: 'Haqiqiy', dataIndex: 'actualKwh', align: 'right', render: (v: number) => kwh(v) },
+    {
+      title: 'Haqiqiy',
+      dataIndex: 'actualKwh',
+      align: 'right',
+      render: (v: number, r) =>
+        r.actualSource === 'counters' ? (
+          <Tooltip title="Invertor hisoblagichining shu davrdagi o'sishi (vendor saytidagi Total Yield farqi)">
+            <span>{kwh(v)}</span>
+          </Tooltip>
+        ) : (
+          kwh(v)
+        ),
+    },
     {
       title: (
         <Tooltip title="Haqiqiy / reja, hamma kunlar hisobga olingan">
@@ -98,13 +110,24 @@ const PlanPage: React.FC = () => {
     },
     {
       title: (
-        <Tooltip title="Stansiya va'da qilinganining choragidan kam bergan kunlar">
+        <Tooltip title="Stansiya shu kuni boshqa stansiyalar bergan kWh/kWp ning choragidan kam bergan kunlar (bulutli kun buzilish hisoblanmaydi), yoki vendor 0 ko'rsatgan va invertor hisoblagichi ham o'smagan kunlar">
           <span>Buzilish kunlari</span>
         </Tooltip>
       ),
       dataIndex: 'breakdownDays',
       align: 'right',
       render: (v: number, r) => (v > 0 ? <Tag color="red">{v} / {r.days}</Tag> : <Text type="secondary">0 / {r.days}</Text>),
+    },
+    {
+      title: (
+        <Tooltip title="Vendor sayti 0 kWh yoki ma'lumot yo'q deb ko'rsatgan, lekin invertor hisoblagichi o'sgan kunlar: stansiya ishlagan, ma'lumot yuboruvchi (datalogger) aloqasi uzilgan">
+          <span>Aloqa uzilgan kunlar</span>
+        </Tooltip>
+      ),
+      dataIndex: 'silentDays',
+      align: 'right',
+      render: (v: number | undefined, r) =>
+        v ? <Tag color="orange">{v}</Tag> : r.noDataDays ? <Tag>{r.noDataDays} kun noma'lum</Tag> : <Text type="secondary">0</Text>,
     },
   ];
 
@@ -178,8 +201,11 @@ const PlanPage: React.FC = () => {
         Reja: panel quvvati (kWp) × o'rnatishda va'da qilingan yillik ishlab chiqarish (kWh/kWp), oylarga JAFA'ning
         hisob jadvalidagi ulush bo'yicha taqsimlangan (iyulda eng ko'p, dekabrda eng kam). Ma'lumot: Status_V 2.0.xlsx.
         Kunlar vendorning o'z kunlik hisobotidan olinadi va har kuni qayta yuklanadi, shuning uchun bizning tizimimiz
-        ishlamagan kunlar (masalan, 16–18 oktabr) ham to'ldiriladi. Vendor 0 kWh yoki umuman ma'lumot ko'rsatmagan kun
-        stansiya ishlamagan kun hisoblanadi va buzilish kuniga qo'shiladi. "Ishlagan kunlarda" ustuni buzilish kunlarini chiqarib
+        ishlamagan kunlar (masalan, 16–18 oktabr) ham to'ldiriladi. SolisCloud'da davrning ishlab chiqarishi invertor
+        hisoblagichidan olinadi: vendor kunlik hisoboti datalogger aloqasi uzilgan kunlarni 0 ko'rsatadi, hisoblagich esa
+        o'sha kunlarda ham ishlab chiqarilganini hisoblaydi. Shunday kunlar "Aloqa uzilgan" deb sanaladi, buzilish emas.
+        Buzilish kuni: stansiya shu kuni boshqa stansiyalar bergan kWh/kWp ning choragidan kam bergan kun, shuning uchun
+        hammaga bir xil ta'sir qilgan bulutli kun buzilish hisoblanmaydi. "Ishlagan kunlarda" ustuni buzilish kunlarini chiqarib
         tashlaydi: u stansiya ishlaganda va'da qilinganini beryaptimi, degan savolga javob. 70% dan past bo'lsa,
         panellar, string yoki invertor sozlamasini joyida tekshirish kerak. Bu reja prognozga qo'shilmagan: sinovda u
         kunlik prognoz sifatida ob-havo modelidan ancha yomon chiqdi.
