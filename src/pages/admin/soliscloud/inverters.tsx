@@ -68,6 +68,10 @@ const SolisCloudInverters: React.FC = () => {
   const [selectedWarranty, setSelectedWarranty] = useState<any>(null);
   const [isWarrantyModalVisible, setIsWarrantyModalVisible] = useState(false);
   const [useDbSource, setUseDbSource] = useState(true);
+  // Each station's own power. In a parallel group the master inverter reports the whole group's
+  // power as its pac (OOO Spaytch X: 46.3 kW on the master, 45.3 kW for the station), so summing
+  // inverters counts the group twice.
+  const [stationPower, setStationPower] = useState<number | null>(null);
 
   useEffect(() => {
     fetchInverters();
@@ -89,6 +93,9 @@ const SolisCloudInverters: React.FC = () => {
         const records = rows.map(normalizeDbInverter);
         setInverters(records);
         setFilteredInverters(records);
+        const stations = await solisCloudService.getDbStations({ page: 1, limit: 100 });
+        const stationRows: any[] = stations.data?.records || stations.data || [];
+        setStationPower(stationRows.reduce((sum, st) => sum + parseValue(st.pac), 0));
         // The stored list carries each inverter's warranty from the synced vendor detail.
         setWarrantyData(new Map(rows.filter((r) => r.warranty).map((r) => [r.sn, r.warranty])));
       } else {
@@ -100,6 +107,8 @@ const SolisCloudInverters: React.FC = () => {
         }
         setInverters(records);
         setFilteredInverters(records);
+        const stations = await solisCloudService.getStationList({ pageNo: 1, pageSize: 100 });
+        setStationPower((stations.records || []).reduce((sum: number, st: any) => sum + toKw(st.power, st.powerStr), 0));
         fetchWarrantyData();
       }
     } catch (error: any) {
@@ -298,7 +307,7 @@ const SolisCloudInverters: React.FC = () => {
     return !max || Date.parse(ts) > Date.parse(max) ? ts : max;
   }, null);
 
-  const totalPower = inverters.reduce((sum, i) => sum + parseValue(i.pac), 0);
+  const totalPower = stationPower ?? inverters.reduce((sum, i) => sum + parseValue(i.pac), 0);
   const totalEnergyToday = inverters.reduce((sum, i) => sum + parseValue(i.etoday), 0);
   const totalEnergyAll = inverters.reduce((sum, i) => sum + parseValue(i.etotal), 0);
   // Only inverters that report a battery; the rest would pull the average towards 0.
