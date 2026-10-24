@@ -10,6 +10,8 @@ import PlanMonthlyChart from './plan-monthly-chart';
 const { Text, Paragraph, Title } = Typography;
 
 const pctColor = (pct: number | null) => (pct === null ? 'default' : pct >= 90 ? 'green' : pct >= 70 ? 'gold' : 'red');
+/** "2026-10-15" -> "15.10", joined for a tooltip. */
+const dateList = (dates?: string[]) => (dates ?? []).map((d) => `${d.slice(8, 10)}.${d.slice(5, 7)}`).join(', ');
 const kwh = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(2)} MWh` : `${v.toFixed(0)} kWh`);
 
 /**
@@ -116,7 +118,16 @@ const PlanPage: React.FC = () => {
       ),
       dataIndex: 'breakdownDays',
       align: 'right',
-      render: (v: number, r) => (v > 0 ? <Tag color="red">{v} / {r.days}</Tag> : <Text type="secondary">0 / {r.days}</Text>),
+      render: (v: number, r) =>
+        v > 0 ? (
+          <Tooltip title={dateList(r.breakdownDates)}>
+            <Tag color="red">
+              {v} / {r.days}
+            </Tag>
+          </Tooltip>
+        ) : (
+          <Text type="secondary">0 / {r.days}</Text>
+        ),
     },
     {
       title: (
@@ -127,7 +138,17 @@ const PlanPage: React.FC = () => {
       dataIndex: 'silentDays',
       align: 'right',
       render: (v: number | undefined, r) =>
-        v ? <Tag color="orange">{v}</Tag> : r.noDataDays ? <Tag>{r.noDataDays} kun noma'lum</Tag> : <Text type="secondary">0</Text>,
+        v ? (
+          <Tooltip title={dateList(r.silentDates)}>
+            <Tag color="orange">{v}</Tag>
+          </Tooltip>
+        ) : r.noDataDays ? (
+          <Tooltip title={dateList(r.noDataDates)}>
+            <Tag>{r.noDataDays} kun noma'lum</Tag>
+          </Tooltip>
+        ) : (
+          <Text type="secondary">0</Text>
+        ),
     },
   ];
 
