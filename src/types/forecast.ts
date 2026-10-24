@@ -100,6 +100,9 @@ export interface StationPlanReport {
   silentDays?: number;
   /** Days nothing is known about; left out of the percentages. */
   noDataDays?: number;
+  breakdownDates?: string[];
+  silentDates?: string[];
+  noDataDates?: string[];
 }
 
 /** One planned station's year by calendar month; `actualKwh` is null where no figure is held. */
