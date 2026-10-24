@@ -5,7 +5,7 @@ import { Spin } from 'antd';
 /**
  * Dashboard Redirect Component
  * Automatically redirects users to the appropriate dashboard based on their role
- * - Admins → /admin
+ * - Admins and read-only viewers → /admin
  * - Regular users → /user
  */
 const DashboardRedirect = () => {
@@ -34,7 +34,7 @@ const DashboardRedirect = () => {
   }
 
   // Redirect based on user role
-  if (user.role === 'admin' || user.role === 'super_admin') {
+  if (user.role === 'admin' || user.role === 'super_admin' || user.role === 'viewer') {
     return <Navigate to="/admin" replace />;
   }
 

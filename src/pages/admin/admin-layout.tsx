@@ -17,10 +17,16 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/layout/AppShell";
+import { useAuth } from "../../helpers/hooks/useAuth";
+
+/** Pages the read-only viewer cannot use: they manage accounts or start syncs. */
+const VIEWER_HIDDEN = new Set(["/admin/users", "/admin/user-stations", "/admin/hopecloud/sync-data"]);
 
 /** Only the menu differs between roles; the frame itself lives in AppShell. */
 const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
 
   const sidebarItems: MenuProps["items"] = [
     {
@@ -220,11 +226,19 @@ const AdminLayout: React.FC = () => {
     },
   ];
 
+  const items: MenuProps["items"] = isViewer
+    ? sidebarItems.map((group: any) =>
+        group?.children
+          ? { ...group, children: group.children.filter((item: any) => !VIEWER_HIDDEN.has(item?.key)) }
+          : group,
+      )
+    : sidebarItems;
+
   return (
     <AppShell
-      items={sidebarItems}
+      items={items}
       profilePath="/admin/profile"
-      fallbackName="Admin"
+      fallbackName={isViewer ? "Kuzatuvchi" : "Admin"}
     />
   );
 };
