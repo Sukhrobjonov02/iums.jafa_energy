@@ -106,7 +106,7 @@ const ActivateAccount = () => {
         navigate("/", {
           state: {
             message:
-              "Email verified successfully! Please log in. Note: Your account must be activated by an administrator before you can access the system.",
+              "Account activated. Please log in.",
           },
         });
       }, 2000);

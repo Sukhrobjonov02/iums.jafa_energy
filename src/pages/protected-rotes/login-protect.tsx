@@ -25,9 +25,11 @@ const LoginProtect = ({ children }: ProtectProps) => {
     );
   }
 
+  // Activating an account signs the user in. Without leaving /activate here, the page
+  // remounted, checked its now-spent token again and showed "Activation Failed".
   if (isAuthenticated && user) {
-    if (location.pathname === "/") {
-      return <Navigate to="/admin" replace />;
+    if (location.pathname === "/" || location.pathname === "/activate") {
+      return <Navigate to="/dashboard" replace />;
     }
   }
 
