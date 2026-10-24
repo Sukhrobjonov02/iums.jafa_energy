@@ -154,6 +154,7 @@ const UserModal: React.FC<UserModalProps> = ({ visible, user, onCancel, onSucces
             <Option value="user">User</Option>
             <Option value="partner">Partner</Option>
             <Option value="operator">Operator</Option>
+            <Option value="viewer">Viewer (faqat ko'rish)</Option>
             <Option value="admin">Admin</Option>
           </Select>
         </Form.Item>
@@ -286,6 +287,7 @@ const UserManagement: React.FC = () => {
           admin: 'red',
           operator: 'orange',
           partner: 'purple',
+          viewer: 'cyan',
           user: 'blue',
         };
         return (

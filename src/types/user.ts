@@ -4,7 +4,7 @@ export interface CreateUserDto {
   password: string;
   firstName: string;
   lastName: string;
-  role?: 'super_admin' | 'admin' | 'operator' | 'user';
+  role?: 'super_admin' | 'admin' | 'operator' | 'viewer' | 'user';
   phone?: string;
   address?: string;
   company?: string;
@@ -27,7 +27,7 @@ export interface UpdateUserDto {
   password?: string;
   firstName?: string;
   lastName?: string;
-  role?: 'super_admin' | 'admin' | 'operator' | 'user';
+  role?: 'super_admin' | 'admin' | 'operator' | 'viewer' | 'user';
   phone?: string;
   address?: string;
   company?: string;
@@ -50,7 +50,7 @@ export interface UserResponseDto {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'super_admin' | 'admin' | 'operator' | 'user';
+  role: 'super_admin' | 'admin' | 'operator' | 'viewer' | 'user';
   phone?: string;
   address?: string;
   company?: string;
