@@ -96,6 +96,15 @@ export interface StationPlanReport {
   breakdownDays: number;
 }
 
+/** One planned station's year by calendar month; `actualKwh` is null where no figure is held. */
+export interface StationPlanYear {
+  provider: StationPlanReport['provider'];
+  stationId: string;
+  stationName: string | null;
+  year: number;
+  months: Array<{ month: number; planKwh: number; actualKwh: number | null }>;
+}
+
 /** One station's page: its past days against the forecast, the forecast's accuracy and its promise. */
 export interface StationInsight {
   provider: ForecastProvider;

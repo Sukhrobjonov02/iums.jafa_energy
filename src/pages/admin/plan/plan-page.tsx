@@ -5,6 +5,7 @@ import { forecastService } from '../../../service/forecast.service';
 import type { StationPlanReport } from '../../../types/forecast';
 import type { VendorKey } from '../../../types/availability';
 import { providerTag } from '../availability/provider-tag';
+import PlanMonthlyChart from './plan-monthly-chart';
 
 const { Text, Paragraph, Title } = Typography;
 
@@ -153,6 +154,10 @@ const PlanPage: React.FC = () => {
           </Col>
         </Row>
 
+        <div style={{ marginTop: 16 }}>
+          <PlanMonthlyChart />
+        </div>
+
         <Card size="small" style={{ marginTop: 16 }}>
           {rows && rows.length === 0 ? (
             <Empty description="Rejasi kiritilgan stansiya yo'q" />
@@ -172,8 +177,9 @@ const PlanPage: React.FC = () => {
       <Paragraph type="secondary" style={{ fontSize: 13, margin: 0 }}>
         Reja: panel quvvati (kWp) × o'rnatishda va'da qilingan yillik ishlab chiqarish (kWh/kWp), oylarga JAFA'ning
         hisob jadvalidagi ulush bo'yicha taqsimlangan (iyulda eng ko'p, dekabrda eng kam). Ma'lumot: Status_V 2.0.xlsx.
-        Faqat haqiqiy ishlab chiqarishi yozilgan kunlar hisoblanadi, shuning uchun bizning tizimimiz ishlamagan kunlar
-        (masalan, 16–18 oktabr) stansiya aybiga yozilmaydi. "Ishlagan kunlarda" ustuni buzilish kunlarini chiqarib
+        Kunlar vendorning o'z kunlik hisobotidan olinadi va har kuni qayta yuklanadi, shuning uchun bizning tizimimiz
+        ishlamagan kunlar (masalan, 16–18 oktabr) ham to'ldiriladi. Vendor 0 kWh yoki umuman ma'lumot ko'rsatmagan kun
+        stansiya ishlamagan kun hisoblanadi va buzilish kuniga qo'shiladi. "Ishlagan kunlarda" ustuni buzilish kunlarini chiqarib
         tashlaydi: u stansiya ishlaganda va'da qilinganini beryaptimi, degan savolga javob. 70% dan past bo'lsa,
         panellar, string yoki invertor sozlamasini joyida tekshirish kerak. Bu reja prognozga qo'shilmagan: sinovda u
         kunlik prognoz sifatida ob-havo modelidan ancha yomon chiqdi.
