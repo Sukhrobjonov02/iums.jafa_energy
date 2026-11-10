@@ -61,6 +61,9 @@ export interface OmInverterResult {
   silentMinutes: number;
   /** Useful minutes with no data in which the energy counter shows it worked; counted as up. */
   producedSilentlyMinutes: number;
+  /** Energy / (irradiance × kWp) used for the silent-time check; the inverter's own when measured. */
+  performanceRatio?: number;
+  performanceRatioMeasured?: boolean;
   excludedMinutes: number;
   excludedByCategory: Partial<Record<ExcusableCategory, number>>;
   noDataMinutes: number;
