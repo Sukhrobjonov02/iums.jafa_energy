@@ -126,6 +126,28 @@ const PeriodsTable: React.FC<{ periods: OmDowntimePeriod[]; labels: Record<Excus
             ),
         },
         {
+          title: 'Hisoblagich',
+          dataIndex: 'counter',
+          width: 230,
+          render: (c: OmDowntimePeriod['counter'], p) => {
+            if (!p.silent || !c) return null;
+            if (!c.known) return <Text type="secondary">hisoblagich ma'lumoti yo'q</Text>;
+            return (
+              <Tooltip
+                title={
+                  c.mixed
+                    ? "Bu oraliqda bir nechta ko'rsatkich kelgan, shuning uchun hisoblagich bo'yicha baholanmadi."
+                    : "Ma'lumot kelmagan vaqtda energiya hisoblagichi qancha o'sgani va quyoshga qarab qancha kutilgani. Kutilganning 70% idan kam bo'lsa, to'xtash hisoblanadi."
+                }
+              >
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  +{c.producedKwh} kWh / kutilgan {c.expectedKwh} kWh{c.mixed ? ' (aralash)' : ''}
+                </Text>
+              </Tooltip>
+            );
+          },
+        },
+        {
           title: 'Vendor alarmi',
           dataIndex: 'causes',
           render: (v: string[]) => (v.length ? v.join(', ') : <Text type="secondary">alarm yo'q</Text>),

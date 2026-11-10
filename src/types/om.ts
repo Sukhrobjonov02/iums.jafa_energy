@@ -49,6 +49,8 @@ export interface OmDowntimePeriod {
   category: ExcusableCategory | null;
   silent: boolean;
   causes: string[];
+  /** For a silent period: how much the energy counter grew across it, against what was expected. */
+  counter?: { known: boolean; producedKwh: number; expectedKwh: number; mixed: boolean } | null;
 }
 
 export interface OmInverterResult {
