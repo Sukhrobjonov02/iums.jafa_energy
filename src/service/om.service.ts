@@ -22,7 +22,7 @@ class OmService {
 
   /** Proposes Grid excusable events from the inverters' grid alarms over the range. */
   async suggest(id: number, q: { year?: number; from?: string; to?: string }): Promise<OmSuggestResult> {
-    const r = await apiClient.post<{ data: OmSuggestResult }>(`/api/om/contracts/${id}/suggest`, null, { params: q });
+    const r = await apiClient.post<{ data: OmSuggestResult }>(`/api/om/contracts/${id}/suggest`, {}, { params: q });
     return r.data.data;
   }
 
