@@ -148,6 +148,11 @@ const InverterBlock: React.FC<{ inv: OmInverterResult; labels: Record<ExcusableC
         foydali vaqt {formatHours(inv.usefulMinutes)}, to'xtash {formatHours(inv.downMinutes)}, shundan uzrli {formatHours(inv.excludedMinutes)}
         {inv.noDataMinutes ? `, ma'lumot yo'q ${formatHours(inv.noDataMinutes)}` : ''}
       </Text>
+      {inv.producedSilentlyMinutes > 0 && (
+        <Tooltip title="Bu vaqtda invertordan ma'lumot kelmagan (internet yoki datalogger uzilgan), lekin energiya hisoblagichi o'sgan. Demak invertor ishlagan, bu vaqt to'xtash hisoblanmaydi.">
+          <Tag color="blue">aloqa yo'q, lekin ishlagan: {formatHours(inv.producedSilentlyMinutes)}</Tag>
+        </Tooltip>
+      )}
     </Space>
     <PeriodsTable periods={inv.periods} labels={labels} />
   </div>
@@ -523,7 +528,20 @@ const OmPage: React.FC = () => {
       dataIndex: 'availabilityPct',
       render: (v: number | null) => <Text strong style={{ color: pctColor(v, gal) }}>{v === null ? '—' : `${v.toFixed(2)}%`}</Text>,
     },
-    { title: 'Foydali vaqt', dataIndex: 'usefulMinutes', render: (v: number) => formatHours(v) },
+    {
+      title: 'Foydali vaqt',
+      dataIndex: 'usefulMinutes',
+      render: (v: number, st) => (
+        <Space direction="vertical" size={0}>
+          <Text>{formatHours(v)}</Text>
+          {st.producedSilentlyMinutes > 0 && (
+            <Tooltip title="Ma'lumot kelmagan, lekin energiya hisoblagichi bo'yicha ishlagan vaqt. To'xtash hisoblanmaydi.">
+              <Text type="secondary" style={{ fontSize: 12 }}>aloqasiz ishlagan: {formatHours(st.producedSilentlyMinutes)}</Text>
+            </Tooltip>
+          )}
+        </Space>
+      ),
+    },
     { title: "To'xtash", dataIndex: 'downMinutes', render: (v: number) => (v ? formatHours(v) : <Text type="secondary">0</Text>) },
     { title: 'Shundan uzrli', dataIndex: 'excludedMinutes', render: (v: number) => (v ? formatHours(v) : <Text type="secondary">0</Text>) },
   ];
@@ -784,7 +802,8 @@ const OmPage: React.FC = () => {
                   natija invertorlarning DC quvvati (kWp) bo'yicha o'rtacha. Vendor hech bir invertordan ma'lumot yubormagan vaqt hisobdan chiqariladi
                   (1.3-band). Butun parkning ko'pi yorug' vaqtda bir vaqtda to'xtasa, bu tarmoq hodisasi deb uzrli hisoblanadi (2.1 d). Mijoz rad etgan
                   uzrli hodisa hisobga olinmaydi. Invertor tarmoq alarmi bergan to'xtashlar avtomatik taklif qilinadi va faqat tasdiqlangandan
-                  keyin hisobga olinadi.
+                  keyin hisobga olinadi. Invertordan ma'lumot kelmagan (internet uzilgan) vaqt, agar shu oraliqda energiya hisoblagichi
+                  kutilganining kamida 70% iga o'sgan bo'lsa, ishlagan deb hisoblanadi.
                 </Paragraph>
               </div>
             )}

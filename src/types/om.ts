@@ -57,6 +57,8 @@ export interface OmInverterResult {
   usefulMinutes: number;
   downMinutes: number;
   silentMinutes: number;
+  /** Useful minutes with no data in which the energy counter shows it worked; counted as up. */
+  producedSilentlyMinutes: number;
   excludedMinutes: number;
   excludedByCategory: Partial<Record<ExcusableCategory, number>>;
   noDataMinutes: number;
@@ -74,6 +76,7 @@ export interface OmStationResult {
   downMinutes: number;
   excludedMinutes: number;
   noDataMinutes: number;
+  producedSilentlyMinutes: number;
   irradianceMissing: boolean;
   inverters: OmInverterResult[];
 }
