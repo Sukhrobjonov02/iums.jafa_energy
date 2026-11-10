@@ -24,7 +24,7 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, SearchOutlined, SettingOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { omService } from '../../../service/om.service';
 import { availabilityService } from '../../../service/availability.service';
@@ -416,6 +416,7 @@ const OmPage: React.FC = () => {
   const [failed, setFailed] = useState<string | null>(null);
   const [contractModal, setContractModal] = useState<{ open: boolean; contract: OmContract | null }>({ open: false, contract: null });
   const [eventModal, setEventModal] = useState<{ open: boolean; event: OmExcusableEvent | null }>({ open: false, event: null });
+  const [searching, setSearching] = useState(false);
 
   const contract = contracts.find((c) => c.id === selected) ?? null;
 
@@ -470,6 +471,31 @@ const OmPage: React.FC = () => {
     const keys = new Set((contract?.stations ?? []).map(key));
     return events.filter((e) => keys.has(key(e)));
   }, [events, contract]);
+  const suggestions = useMemo(() => contractEvents.filter((e) => e.reviewStatus === 'suggested'), [contractEvents]);
+  const recorded = useMemo(() => contractEvents.filter((e) => e.reviewStatus !== 'suggested'), [contractEvents]);
+
+  const review = (e: OmExcusableEvent, status: OmExcusableEvent['reviewStatus']) =>
+    omService
+      .review(e.id, status)
+      .then(() => {
+        message.success(status === 'confirmed' ? 'Tasdiqlandi, foizga qo\'shildi' : 'Rad etildi, qayta taklif qilinmaydi');
+        load();
+      })
+      .catch(() => message.error("Saqlab bo'lmadi"));
+
+  const search = () => {
+    if (!selected) return;
+    setSearching(true);
+    omService
+      .suggest(selected, range)
+      .then((r) => {
+        if (r.created || r.updated) message.success(`${r.created} ta yangi taklif${r.updated ? `, ${r.updated} ta yangilandi` : ''}`);
+        else message.info("Bu davrda tarmoq alarmi bilan to'xtash topilmadi");
+        load();
+      })
+      .catch((e) => message.error(e?.response?.data?.message ?? "Qidirib bo'lmadi"))
+      .finally(() => setSearching(false));
+  };
 
   const gal = contract?.galPct ?? 97;
   const s = report?.settlement;
@@ -518,7 +544,12 @@ const OmPage: React.FC = () => {
       </Space>
     ) },
     { title: 'Mijoz', dataIndex: 'customerStatus', render: (v: OmExcusableEvent['customerStatus']) => <Tag color={STATUS_UZ[v].color}>{STATUS_UZ[v].label}</Tag> },
-    { title: 'Kim', dataIndex: 'createdBy', render: (v: string | null, e) => <Text type="secondary">{e.source === 'manual' ? v ?? '' : 'avtomatik'}</Text> },
+    { title: 'Kim', dataIndex: 'createdBy', render: (v: string | null, e) => (
+      <Space direction="vertical" size={0}>
+        <Text type="secondary">{e.source === 'manual' ? v ?? '' : 'avtomatik'}</Text>
+        {e.reviewStatus === 'rejected' && <Tag>JAFA rad etgan (hisobga olinmaydi)</Tag>}
+      </Space>
+    ) },
     ...(canEdit
       ? [{
           title: '',
@@ -673,6 +704,64 @@ const OmPage: React.FC = () => {
 
                 <Card
                   size="small"
+                  title={
+                    <Space>
+                      <ThunderboltOutlined />
+                      Avtomatik takliflar
+                      {suggestions.length > 0 && <Tag color="gold">{suggestions.length}</Tag>}
+                    </Space>
+                  }
+                  extra={
+                    canEdit && (
+                      <Tooltip title="Tanlangan davrda invertor tarmoq alarmi bergan to'xtashlarni qidiradi. Har soatda oxirgi 3 kun o'zi tekshiriladi.">
+                        <Button size="small" icon={<SearchOutlined />} loading={searching} onClick={search}>
+                          Shu davrda qidirish
+                        </Button>
+                      </Tooltip>
+                    )
+                  }
+                  styles={{ body: { padding: suggestions.length ? 0 : 12 } }}
+                >
+                  {suggestions.length ? (
+                    <Table<OmExcusableEvent>
+                      rowKey="id"
+                      size="small"
+                      dataSource={suggestions}
+                      pagination={suggestions.length > 10 ? { pageSize: 10 } : false}
+                      scroll={{ x: 800 }}
+                      columns={[
+                        eventColumns[0],
+                        eventColumns[1],
+                        eventColumns[2],
+                        { title: 'Sabab', dataIndex: 'description', render: (v: string | null) => <Text>{v ?? ''}</Text> },
+                        ...(canEdit
+                          ? [{
+                              title: '',
+                              width: 230,
+                              render: (_: unknown, e: OmExcusableEvent) => (
+                                <Space>
+                                  <Button size="small" type="primary" icon={<CheckOutlined />} onClick={() => review(e, 'confirmed')}>
+                                    Tasdiqlash
+                                  </Button>
+                                  <Button size="small" icon={<CloseOutlined />} onClick={() => review(e, 'rejected')}>
+                                    Rad etish
+                                  </Button>
+                                </Space>
+                              ),
+                            }]
+                          : []),
+                      ]}
+                    />
+                  ) : (
+                    <Text type="secondary">
+                      Tasdiqlanishi kerak bo'lgan taklif yo'q. Invertor to'xtagan paytda tarmoq alarmi (kuchlanish yoki chastota me'yordan
+                      tashqari, tarmoq yo'q) bo'lsa, tizim bu yerda uzrli hodisa taklif qiladi.
+                    </Text>
+                  )}
+                </Card>
+
+                <Card
+                  size="small"
                   title="Uzrli hodisalar (Ilova 3, 2-qism)"
                   extra={canEdit && <Button size="small" icon={<PlusOutlined />} onClick={() => setEventModal({ open: true, event: null })}>Qo'shish</Button>}
                   styles={{ body: { padding: 0 } }}
@@ -680,9 +769,9 @@ const OmPage: React.FC = () => {
                   <Table<OmExcusableEvent>
                     rowKey="id"
                     size="small"
-                    dataSource={contractEvents}
+                    dataSource={recorded}
                     columns={eventColumns}
-                    pagination={contractEvents.length > 10 ? { pageSize: 10 } : false}
+                    pagination={recorded.length > 10 ? { pageSize: 10 } : false}
                     scroll={{ x: 800 }}
                     locale={{ emptyText: "Uzrli hodisa kiritilmagan" }}
                   />
@@ -694,7 +783,8 @@ const OmPage: React.FC = () => {
                   piranometr yo'q. Har invertor uchun A = (foydali vaqt − to'xtash + uzrli to'xtash) / foydali vaqt. Obyekt va shartnoma bo'yicha
                   natija invertorlarning DC quvvati (kWp) bo'yicha o'rtacha. Vendor hech bir invertordan ma'lumot yubormagan vaqt hisobdan chiqariladi
                   (1.3-band). Butun parkning ko'pi yorug' vaqtda bir vaqtda to'xtasa, bu tarmoq hodisasi deb uzrli hisoblanadi (2.1 d). Mijoz rad etgan
-                  uzrli hodisa hisobga olinmaydi.
+                  uzrli hodisa hisobga olinmaydi. Invertor tarmoq alarmi bergan to'xtashlar avtomatik taklif qilinadi va faqat tasdiqlangandan
+                  keyin hisobga olinadi.
                 </Paragraph>
               </div>
             )}
