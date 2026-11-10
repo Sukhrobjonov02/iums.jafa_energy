@@ -137,7 +137,7 @@ const PeriodsTable: React.FC<{ periods: OmDowntimePeriod[]; labels: Record<Excus
                 title={
                   c.mixed
                     ? "Bu oraliqda bir nechta ko'rsatkich kelgan, shuning uchun hisoblagich bo'yicha baholanmadi."
-                    : "Ma'lumot kelmagan vaqtda energiya hisoblagichi qancha o'sgani va quyoshga qarab qancha kutilgani. Kutilganning 70% idan kam bo'lsa, to'xtash hisoblanadi."
+                    : "Ma'lumot kelmagan vaqtda energiya hisoblagichi qancha o'sgani va shu invertorning odatiy ko'rsatkichiga (PR) qarab qancha kutilgani. Kutilganning 70% idan kam bo'lsa, to'xtash hisoblanadi."
                 }
               >
                 <Text type="secondary" style={{ fontSize: 12 }}>
@@ -173,6 +173,17 @@ const InverterBlock: React.FC<{ inv: OmInverterResult; labels: Record<ExcusableC
       {inv.producedSilentlyMinutes > 0 && (
         <Tooltip title="Bu vaqtda invertordan ma'lumot kelmagan (internet yoki datalogger uzilgan), lekin energiya hisoblagichi o'sgan. Demak invertor ishlagan, bu vaqt to'xtash hisoblanmaydi.">
           <Tag color="blue">aloqa yo'q, lekin ishlagan: {formatHours(inv.producedSilentlyMinutes)}</Tag>
+        </Tooltip>
+      )}
+      {inv.performanceRatio !== undefined && (
+        <Tooltip
+          title={
+            inv.performanceRatioMeasured
+              ? "Shu invertor aloqa bor paytda quyoshga nisbatan odatda qancha energiya beradi. Aloqa yo'q vaqtdagi kutilgan energiya shu bilan hisoblanadi."
+              : "Invertorning o'z ko'rsatkichini hisoblash uchun ma'lumot yetarli emas, umumiy 0.75 olingan."
+          }
+        >
+          <Tag>PR {inv.performanceRatio.toFixed(2)}{inv.performanceRatioMeasured ? '' : ' (umumiy)'}</Tag>
         </Tooltip>
       )}
     </Space>
@@ -825,7 +836,8 @@ const OmPage: React.FC = () => {
                   (1.3-band). Butun parkning ko'pi yorug' vaqtda bir vaqtda to'xtasa, bu tarmoq hodisasi deb uzrli hisoblanadi (2.1 d). Mijoz rad etgan
                   uzrli hodisa hisobga olinmaydi. Invertor tarmoq alarmi bergan to'xtashlar avtomatik taklif qilinadi va faqat tasdiqlangandan
                   keyin hisobga olinadi. Invertordan ma'lumot kelmagan (internet uzilgan) vaqt, agar shu oraliqda energiya hisoblagichi
-                  kutilganining kamida 70% iga o'sgan bo'lsa, ishlagan deb hisoblanadi.
+                  kutilganining kamida 70% iga o'sgan bo'lsa, ishlagan deb hisoblanadi. Kutilgan energiya invertorning o'zi aloqa bor
+                  paytda odatda beradigan nisbat (PR) bilan hisoblanadi; ma'lumot kam bo'lsa 0.75 olinadi.
                 </Paragraph>
               </div>
             )}
