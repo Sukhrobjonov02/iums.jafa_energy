@@ -7,6 +7,7 @@ import {
   CloudServerOutlined,
   DashboardOutlined,
   DatabaseOutlined,
+  FileProtectOutlined,
   FireOutlined,
   HomeOutlined,
   LineChartOutlined,
@@ -57,6 +58,12 @@ const AdminLayout: React.FC = () => {
           icon: <BarChartOutlined />,
           label: "Reja va haqiqat",
           onClick: () => navigate("/admin/plan"),
+        },
+        {
+          key: "/admin/om",
+          icon: <FileProtectOutlined />,
+          label: "O&M shartnoma",
+          onClick: () => navigate("/admin/om"),
         },
         // Hidden - Not yet implemented
         // {
