@@ -1,5 +1,5 @@
 import { apiClient } from './api-client';
-import type { ExcusableCategory, OmAvailabilityReport, OmContract, OmExcusableEvent } from '../types/om';
+import type { ExcusableCategory, OmAvailabilityReport, OmContract, OmExcusableEvent, OmSuggestResult } from '../types/om';
 
 /** The O&M Agreement: contracts, their Annex 3 availability and the excusable events. */
 class OmService {
@@ -17,6 +17,17 @@ class OmService {
 
   async availability(id: number, q: { year?: number; from?: string; to?: string }): Promise<OmAvailabilityReport> {
     const r = await apiClient.get<{ data: OmAvailabilityReport }>(`/api/om/contracts/${id}/availability`, { params: q });
+    return r.data.data;
+  }
+
+  /** Proposes Grid excusable events from the inverters' grid alarms over the range. */
+  async suggest(id: number, q: { year?: number; from?: string; to?: string }): Promise<OmSuggestResult> {
+    const r = await apiClient.post<{ data: OmSuggestResult }>(`/api/om/contracts/${id}/suggest`, null, { params: q });
+    return r.data.data;
+  }
+
+  async review(id: number, reviewStatus: OmExcusableEvent['reviewStatus']): Promise<OmExcusableEvent> {
+    const r = await apiClient.put<{ data: OmExcusableEvent }>(`/api/om/excusable-events/${id}`, { reviewStatus });
     return r.data.data;
   }
 

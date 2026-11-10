@@ -102,7 +102,16 @@ export interface OmAvailabilityReport {
   categoryLabels: Record<ExcusableCategory, string>;
   stations: OmStationResult[];
   generatedAt: string;
+  /** Automatically raised events in the range still waiting for staff review. */
+  suggestedEvents: number;
   notes: string[];
+}
+
+export interface OmSuggestResult {
+  from: string;
+  to: string;
+  created: number;
+  updated: number;
 }
 
 export interface OmExcusableEvent {
@@ -117,6 +126,8 @@ export interface OmExcusableEvent {
   evidence: string[];
   source: string;
   customerStatus: 'pending' | 'accepted' | 'disputed';
+  /** confirmed counts; suggested (raised automatically) waits for staff; rejected never counts. */
+  reviewStatus: 'confirmed' | 'suggested' | 'rejected';
   createdBy: string | null;
   createdAt: string;
 }
