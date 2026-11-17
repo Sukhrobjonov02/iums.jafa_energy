@@ -139,3 +139,47 @@ export interface OmExcusableEvent {
   createdBy: string | null;
   createdAt: string;
 }
+
+/** Annex 2 categories by the share of production lost. */
+export type IncidentCategory = 'total' | 'major' | 'minor' | 'noncritical';
+
+/** Where one Annex 2 clock stands. */
+export type DeadlineState = 'done' | 'late' | 'pending' | 'overdue' | 'not_needed' | 'next_visit';
+
+/** A fault on a contracted plant with its Annex 2 response clocks. */
+export interface OmIncident {
+  id: number;
+  contractId: number | null;
+  provider: string;
+  stationId: string;
+  stationName: string | null;
+  inverterSns: string[];
+  category: IncidentCategory;
+  categoryManual: boolean;
+  lossPct: number | null;
+  title: string | null;
+  detectedAt: string;
+  endedAt: string | null;
+  responseDueAt: string;
+  arrivalDueAt: string | null;
+  diagnosedAt: string | null;
+  cause: string | null;
+  customerNotifiedAt: string | null;
+  notifiedVia: string | null;
+  arrivedAt: string | null;
+  arrivalNotNeeded: boolean;
+  resolvedAt: string | null;
+  notes: string | null;
+  silent: boolean;
+  source: string;
+  createdBy: string | null;
+  responseState: DeadlineState;
+  arrivalState: DeadlineState;
+}
+
+export interface OmScanResult {
+  from: string;
+  to: string;
+  created: number;
+  updated: number;
+}
