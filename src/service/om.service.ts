@@ -1,5 +1,5 @@
 import { apiClient } from './api-client';
-import type { ExcusableCategory, OmAvailabilityReport, OmContract, OmExcusableEvent, OmSuggestResult } from '../types/om';
+import type { ExcusableCategory, OmAvailabilityReport, OmContract, OmExcusableEvent, OmIncident, OmScanResult, OmSuggestResult } from '../types/om';
 
 /** The O&M Agreement: contracts, their Annex 3 availability and the excusable events. */
 class OmService {
@@ -50,6 +50,29 @@ class OmService {
 
   async removeEvent(id: number): Promise<void> {
     await apiClient.delete(`/api/om/excusable-events/${id}`);
+  }
+
+  /** The incident log (Annex 2): incidents open in the range plus every unresolved one. */
+  async incidents(id: number, q: { from?: string; to?: string }): Promise<OmIncident[]> {
+    const r = await apiClient.get<{ data: OmIncident[] }>(`/api/om/contracts/${id}/incidents`, { params: q });
+    return r.data.data;
+  }
+
+  /** Opens incidents from the downtime in the range (runs by itself every 15 minutes for 3 days). */
+  async scanIncidents(id: number, q: { from?: string; to?: string }): Promise<OmScanResult> {
+    const r = await apiClient.post<{ data: OmScanResult }>(`/api/om/contracts/${id}/incidents/scan`, {}, { params: q });
+    return r.data.data;
+  }
+
+  async saveIncident(i: Partial<OmIncident>): Promise<OmIncident> {
+    const r = i.id
+      ? await apiClient.put<{ data: OmIncident }>(`/api/om/incidents/${i.id}`, i)
+      : await apiClient.post<{ data: OmIncident }>('/api/om/incidents', i);
+    return r.data.data;
+  }
+
+  async removeIncident(id: number): Promise<void> {
+    await apiClient.delete(`/api/om/incidents/${id}`);
   }
 }
 

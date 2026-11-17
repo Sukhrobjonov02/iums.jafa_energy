@@ -30,6 +30,7 @@ import { omService } from '../../../service/om.service';
 import { availabilityService } from '../../../service/availability.service';
 import { useAuth } from '../../../helpers/hooks/useAuth';
 import { providerTag } from '../availability/provider-tag';
+import { IncidentsCard } from './incidents-card';
 import type {
   ExcusableCategory,
   OmAvailabilityReport,
@@ -752,6 +753,8 @@ const OmPage: React.FC = () => {
                     <Empty style={{ padding: 32 }} description="Shartnomada obyekt yo'q" />
                   )}
                 </Card>
+
+                {contract && <IncidentsCard contract={contract} from={report.from} to={report.to} canEdit={canEdit} names={names} />}
 
                 <Card
                   size="small"
