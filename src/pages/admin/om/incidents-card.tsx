@@ -9,6 +9,7 @@ import {
   Input,
   Modal,
   Popconfirm,
+  Segmented,
   Select,
   Space,
   Table,
@@ -72,15 +73,19 @@ type Prefill = Partial<Record<'customerNotifiedAt' | 'arrivedAt' | 'resolvedAt',
 /** The incident log of Annex 2: every fault, its two clocks, and what staff did about it. */
 export const IncidentsCard: React.FC<Props> = ({ contract, from, to, canEdit, names }) => {
   const [rows, setRows] = useState<OmIncident[]>([]);
+  const [openRows, setOpenRows] = useState<OmIncident[]>([]);
+  const [view, setView] = useState<'range' | 'open'>('range');
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [modal, setModal] = useState<{ open: boolean; incident: OmIncident | null; prefill: Prefill }>({ open: false, incident: null, prefill: {} });
 
   const load = useCallback(() => {
     setLoading(true);
-    omService
-      .incidents(contract.id, { from, to })
-      .then(setRows)
+    Promise.all([omService.incidents(contract.id, { from, to }), omService.incidents(contract.id, { open: true })])
+      .then(([inRange, open]) => {
+        setRows(inRange);
+        setOpenRows(open);
+      })
       .catch(() => message.error("Hodisalarni olib bo'lmadi"))
       .finally(() => setLoading(false));
   }, [contract.id, from, to]);
@@ -100,7 +105,8 @@ export const IncidentsCard: React.FC<Props> = ({ contract, from, to, canEdit, na
   };
 
   const open = (incident: OmIncident | null, prefill: Prefill = {}) => setModal({ open: true, incident, prefill });
-  const overdue = rows.filter((r) => !r.resolvedAt && (r.responseState === 'overdue' || r.arrivalState === 'overdue')).length;
+  const overdue = openRows.filter((r) => r.responseState === 'overdue' || r.arrivalState === 'overdue').length;
+  const shown = view === 'open' ? openRows : rows;
 
   const columns: ColumnsType<OmIncident> = [
     {
@@ -200,7 +206,20 @@ export const IncidentsCard: React.FC<Props> = ({ contract, from, to, canEdit, na
       title={
         <Space>
           <span>Hodisalar jurnali (Ilova 2: javob vaqtlari)</span>
-          {overdue > 0 && <Tag color="red">{overdue} ta muddati o'tgan</Tag>}
+          <Segmented<'range' | 'open'>
+            size="small"
+            value={view}
+            onChange={setView}
+            options={[
+              { label: 'Shu davr', value: 'range' },
+              { label: `Yopilmagan (${openRows.length})`, value: 'open' },
+            ]}
+          />
+          {overdue > 0 && (
+            <Tooltip title="Yopilmagan hodisalardan muddati o'tganlari (barcha oylar bo'yicha)">
+              <Tag color="red" style={{ cursor: 'pointer' }} onClick={() => setView('open')}>{overdue} ta muddati o'tgan</Tag>
+            </Tooltip>
+          )}
         </Space>
       }
       extra={
@@ -219,11 +238,11 @@ export const IncidentsCard: React.FC<Props> = ({ contract, from, to, canEdit, na
         rowKey="id"
         size="small"
         loading={loading}
-        dataSource={rows}
+        dataSource={shown}
         columns={columns}
-        pagination={rows.length > 10 ? { pageSize: 10 } : false}
+        pagination={shown.length > 10 ? { pageSize: 10 } : false}
         scroll={{ x: 950 }}
-        locale={{ emptyText: "Bu davrda hodisa yo'q" }}
+        locale={{ emptyText: view === 'open' ? "Yopilmagan hodisa yo'q" : "Bu davrda hodisa yo'q" }}
       />
       <Text type="secondary" style={{ display: 'block', padding: '8px 12px', fontSize: 12 }}>
         Invertor(lar) 30 daqiqadan ko'p ishlamasa (uzrli bo'lmagan to'xtash), tizim hodisa ochadi. Toifa to'xtagan quvvat ulushiga qarab

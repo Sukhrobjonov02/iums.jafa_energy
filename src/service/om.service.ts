@@ -52,8 +52,8 @@ class OmService {
     await apiClient.delete(`/api/om/excusable-events/${id}`);
   }
 
-  /** The incident log (Annex 2): incidents open in the range plus every unresolved one. */
-  async incidents(id: number, q: { from?: string; to?: string }): Promise<OmIncident[]> {
+  /** The incident log (Annex 2): incidents in the range, or with `open` every unresolved one. */
+  async incidents(id: number, q: { from?: string; to?: string; open?: boolean }): Promise<OmIncident[]> {
     const r = await apiClient.get<{ data: OmIncident[] }>(`/api/om/contracts/${id}/incidents`, { params: q });
     return r.data.data;
   }
