@@ -1,18 +1,45 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Empty, Form, Input, Select, Space, Spin, Typography, message } from 'antd';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Button, Card, DatePicker, Empty, Form, Input, Segmented, Select, Space, Spin, Typography, message } from 'antd';
 import { FileExcelOutlined, PrinterOutlined, SaveOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { omService } from '../../../service/om.service';
 import { useAuth } from '../../../helpers/hooks/useAuth';
-import type { OmContract, OmMonthlyReport } from '../../../types/om';
+import type { OmContract, OmPeriodReport, OmReportPeriod } from '../../../types/om';
 import { ReportDocument } from './report-document';
 import { REPORT_CSS } from './report-style';
 
 const { Title, Text } = Typography;
 
 const TASHKENT_MS = 5 * 3_600_000;
-/** Reports are written for a finished month, so the page opens on the last one. */
-const lastMonth = () => dayjs(new Date(Date.now() + TASHKENT_MS).toISOString().slice(0, 10)).subtract(1, 'month').startOf('month');
+const today = () => dayjs(new Date(Date.now() + TASHKENT_MS).toISOString().slice(0, 10));
+/** Reports are written for a finished period, so the page opens on the last month and on yesterday. */
+const lastMonth = () => today().subtract(1, 'month').startOf('month');
+const yesterday = () => today().subtract(1, 'day');
+
+const PERIODS: { value: OmReportPeriod; label: string }[] = [
+  { value: 'day', label: 'Kunlik' },
+  { value: 'month', label: 'Oylik' },
+  { value: 'year', label: 'Yillik' },
+];
+const FILE_NAME: Record<OmReportPeriod, string> = { day: 'OM-kunlik-hisobot', month: 'OM-hisobot', year: 'OM-yillik-hisobot' };
+/** A running Contract Year is flagged by the report's own warnings. */
+const RUNNING: Record<OmReportPeriod, string | null> = {
+  day: "Bu kun hali tugamagan: hisobot hozirgacha bo'lgan ma'lumot bilan tuzildi.",
+  month: "Bu oy hali tugamagan: hisobot bugungi kungacha bo'lgan ma'lumot bilan tuzildi.",
+  year: null,
+};
+
+/** The Contract Years that have started, counted from the Service Commencement Date. */
+function contractYears(serviceStartDate: string | undefined): { value: number; label: string }[] {
+  if (!serviceStartDate) return [];
+  const start = dayjs(serviceStartDate);
+  const out: { value: number; label: string }[] = [];
+  for (let n = 1; n <= 99 && !start.add(n - 1, 'year').isAfter(today(), 'day'); n++) {
+    const from = start.add(n - 1, 'year');
+    out.push({ value: n, label: `${n}-yil (${from.format('DD.MM.YYYY')} – ${start.add(n, 'year').subtract(1, 'day').format('DD.MM.YYYY')})` });
+  }
+  return out;
+}
 
 /** Prints the report alone from an empty frame, so the app's layout cannot clip or restyle it. */
 function printReport(node: HTMLElement, title: string) {
@@ -36,15 +63,21 @@ const OmReportPage: React.FC = () => {
   const canEdit = user?.role !== 'viewer';
   const [contracts, setContracts] = useState<OmContract[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const [period, setPeriod] = useState<OmReportPeriod>('month');
   const [month, setMonth] = useState<Dayjs>(lastMonth);
-  const [report, setReport] = useState<OmMonthlyReport | null>(null);
+  const [day, setDay] = useState<Dayjs>(yesterday);
+  const [year, setYear] = useState<number | null>(null);
+  const [report, setReport] = useState<OmPeriodReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [form] = Form.useForm();
   const docRef = useRef<HTMLDivElement>(null);
-  const monthKey = month.format('YYYY-MM');
+  const years = useMemo(() => contractYears(contracts.find((c) => c.id === selected)?.serviceStartDate), [contracts, selected]);
+  // The running Contract Year unless another was picked; none while the services have not started.
+  const yearKey = years.some((y) => y.value === year) ? year : years[years.length - 1]?.value ?? null;
+  const key = period === 'day' ? day.format('YYYY-MM-DD') : period === 'month' ? month.format('YYYY-MM') : yearKey === null ? null : String(yearKey);
 
   useEffect(() => {
     omService
@@ -62,9 +95,15 @@ const OmReportPage: React.FC = () => {
 
   const load = useCallback(() => {
     if (!selected) return;
+    if (key === null) {
+      setReport(null);
+      setFailed("Bu shartnoma bo'yicha xizmat hali boshlanmagan, shuning uchun yillik hisobot yo'q.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     omService
-      .monthlyReport(selected, monthKey)
+      .report(selected, period, key)
       .then((r) => {
         setReport(r);
         setFailed(null);
@@ -80,7 +119,7 @@ const OmReportPage: React.FC = () => {
         setFailed(e?.response?.data?.message ?? "Hisobotni tuzib bo'lmadi");
       })
       .finally(() => setLoading(false));
-  }, [selected, monthKey, form]);
+  }, [selected, period, key, form]);
 
   useEffect(load, [load]);
 
@@ -88,7 +127,7 @@ const OmReportPage: React.FC = () => {
     if (!selected || !report) return;
     setSaving(true);
     try {
-      const notes = await omService.saveReportNotes(selected, monthKey, form.getFieldsValue());
+      const notes = await omService.saveReportNotes(selected, report.key, form.getFieldsValue());
       setReport({ ...report, notes });
       message.success('Saqlandi, hisobotga qo\'shildi');
     } catch (e: any) {
@@ -99,14 +138,14 @@ const OmReportPage: React.FC = () => {
   };
 
   const excel = async () => {
-    if (!selected) return;
+    if (!selected || key === null || !report) return;
     setDownloading(true);
     try {
-      const blob = await omService.monthlyReportExcel(selected, monthKey);
+      const blob = await omService.reportExcel(selected, period, key);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `OM-hisobot-${monthKey}.xlsx`;
+      a.download = `${FILE_NAME[period]}-${report.key}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -120,7 +159,7 @@ const OmReportPage: React.FC = () => {
     <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 1fr)' }}>
       <style>{REPORT_CSS}</style>
       <Space style={{ justifyContent: 'space-between', width: '100%' }} wrap>
-        <Title level={3} style={{ margin: 0 }}>O&M oylik hisobot</Title>
+        <Title level={3} style={{ margin: 0 }}>O&M hisobot</Title>
         <Space wrap>
           <Select
             style={{ minWidth: 220 }}
@@ -129,20 +168,29 @@ const OmReportPage: React.FC = () => {
             onChange={setSelected}
             options={contracts.map((c) => ({ value: c.id, label: c.name }))}
           />
-          <DatePicker
-            picker="month"
-            allowClear={false}
-            format="MM.YYYY"
-            value={month}
-            onChange={(v) => v && setMonth(v.startOf('month'))}
-            disabledDate={(d) => d.isAfter(dayjs(), 'month')}
-          />
+          <Segmented options={PERIODS} value={period} onChange={(v) => setPeriod(v as OmReportPeriod)} />
+          {period === 'day' && (
+            <DatePicker allowClear={false} format="DD.MM.YYYY" value={day} onChange={(v) => v && setDay(v)} disabledDate={(d) => d.isAfter(today(), 'day')} />
+          )}
+          {period === 'month' && (
+            <DatePicker
+              picker="month"
+              allowClear={false}
+              format="MM.YYYY"
+              value={month}
+              onChange={(v) => v && setMonth(v.startOf('month'))}
+              disabledDate={(d) => d.isAfter(dayjs(), 'month')}
+            />
+          )}
+          {period === 'year' && (
+            <Select style={{ minWidth: 250 }} value={yearKey ?? undefined} placeholder="Shartnoma yili" onChange={setYear} options={years} />
+          )}
           <Button icon={<FileExcelOutlined />} loading={downloading} disabled={!report} onClick={excel}>Excel</Button>
           <Button
             type="primary"
             icon={<PrinterOutlined />}
             disabled={!report}
-            onClick={() => docRef.current && report && printReport(docRef.current, `OM hisobot ${report.month} ${report.contractName}`)}
+            onClick={() => docRef.current && report && printReport(docRef.current, `${FILE_NAME[report.period]} ${report.key} ${report.contractName}`)}
           >
             Chop etish / PDF
           </Button>
@@ -157,12 +205,10 @@ const OmReportPage: React.FC = () => {
         <Spin spinning={loading}>
           {report && (
             <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-              {!report.complete && (
-                <Alert type="info" showIcon message="Bu oy hali tugamagan: hisobot bugungi kungacha bo'lgan ma'lumot bilan tuzildi." />
-              )}
+              {!report.complete && RUNNING[report.period] && <Alert type="info" showIcon message={RUNNING[report.period]} />}
               {report.warnings.map((w) => <Alert key={w} type="warning" showIcon message={w} />)}
 
-              {canEdit && (
+              {canEdit && report.period !== 'day' && (
                 <Card
                   size="small"
                   title="Qo'lda to'ldiriladigan bo'limlar"
@@ -179,13 +225,24 @@ const OmReportPage: React.FC = () => {
                       <Form.Item name="hse" label="6. Mehnat muhofazasi va atrof-muhit hodisalari" style={{ margin: 0 }}>
                         <Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} placeholder="Masalan: hodisa qayd etilmadi" />
                       </Form.Item>
-                      <Form.Item name="recommendations" label="7. Tavsiyalar" style={{ margin: 0 }}>
-                        <Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} placeholder="Masalan: obyektdagi internetni barqarorlashtirish tavsiya etiladi" />
+                      <Form.Item
+                        name="recommendations"
+                        label={report.period === 'year' ? "7. Tavsiyalar va keyingi yil texnik xizmat jadvali bo'yicha takliflar" : '7. Tavsiyalar'}
+                        style={{ margin: 0 }}
+                      >
+                        <Input.TextArea
+                          autoSize={{ minRows: 3, maxRows: 10 }}
+                          placeholder={
+                            report.period === 'year'
+                              ? 'Masalan: panellarni yuvish aprel va sentabrda; invertorlar ko\'rigi har chorakda'
+                              : 'Masalan: obyektdagi internetni barqarorlashtirish tavsiya etiladi'
+                          }
+                        />
                       </Form.Item>
                     </div>
                   </Form>
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    Bu matnlar shu oy hisobotining tegishli bo'limlariga chiqadi. Saqlagandan keyin pastdagi hisobotda ko'rinadi.
+                    Bu matnlar shu {report.period === 'year' ? 'yil' : 'oy'} hisobotining tegishli bo'limlariga chiqadi. Saqlagandan keyin pastdagi hisobotda ko'rinadi.
                   </Text>
                 </Card>
               )}

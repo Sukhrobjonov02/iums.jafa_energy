@@ -1,5 +1,8 @@
 import { apiClient } from './api-client';
-import type { ExcusableCategory, OmAvailabilityReport, OmContract, OmExcusableEvent, OmIncident, OmMonthlyReport, OmReportNotes, OmScanResult, OmSuggestResult } from '../types/om';
+import type { ExcusableCategory, OmAvailabilityReport, OmContract, OmExcusableEvent, OmIncident, OmPeriodReport, OmReportPeriod, OmReportNotes, OmScanResult, OmSuggestResult } from '../types/om';
+
+const REPORT_PATH: Record<OmReportPeriod, string> = { day: 'daily-report', month: 'monthly-report', year: 'annual-report' };
+const REPORT_PARAM: Record<OmReportPeriod, string> = { day: 'date', month: 'month', year: 'year' };
 
 /** The O&M Agreement: contracts, their Annex 3 availability and the excusable events. */
 class OmService {
@@ -75,19 +78,20 @@ class OmService {
     await apiClient.delete(`/api/om/incidents/${id}`);
   }
 
-  /** The monthly report of Annex 5; `month` is YYYY-MM. */
-  async monthlyReport(id: number, month: string): Promise<OmMonthlyReport> {
-    const r = await apiClient.get<{ data: OmMonthlyReport }>(`/api/om/contracts/${id}/monthly-report`, { params: { month } });
+  /** A report; `key` is the day (YYYY-MM-DD), the month (YYYY-MM) or the Contract Year's number. */
+  async report(id: number, period: OmReportPeriod, key: string): Promise<OmPeriodReport> {
+    const r = await apiClient.get<{ data: OmPeriodReport }>(`/api/om/contracts/${id}/${REPORT_PATH[period]}`, { params: { [REPORT_PARAM[period]]: key } });
     return r.data.data;
   }
 
-  async monthlyReportExcel(id: number, month: string): Promise<Blob> {
-    const r = await apiClient.get(`/api/om/contracts/${id}/monthly-report/excel`, { params: { month }, responseType: 'blob' });
+  async reportExcel(id: number, period: OmReportPeriod, key: string): Promise<Blob> {
+    const r = await apiClient.get(`/api/om/contracts/${id}/${REPORT_PATH[period]}/excel`, { params: { [REPORT_PARAM[period]]: key }, responseType: 'blob' });
     return r.data;
   }
 
-  async saveReportNotes(id: number, month: string, notes: Partial<OmReportNotes>): Promise<OmReportNotes> {
-    const r = await apiClient.put<{ data: OmReportNotes }>(`/api/om/contracts/${id}/monthly-report/notes`, notes, { params: { month } });
+  /** `key` is the report's own key: "YYYY-MM", or "Y1" for the annual report of Contract Year 1. */
+  async saveReportNotes(id: number, key: string, notes: Partial<OmReportNotes>): Promise<OmReportNotes> {
+    const r = await apiClient.put<{ data: OmReportNotes }>(`/api/om/contracts/${id}/monthly-report/notes`, notes, { params: { month: key } });
     return r.data.data;
   }
 }
