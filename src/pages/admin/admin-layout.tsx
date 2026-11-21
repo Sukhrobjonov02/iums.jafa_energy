@@ -8,6 +8,7 @@ import {
   DashboardOutlined,
   DatabaseOutlined,
   FileProtectOutlined,
+  FileTextOutlined,
   FireOutlined,
   HomeOutlined,
   LineChartOutlined,
@@ -64,6 +65,12 @@ const AdminLayout: React.FC = () => {
           icon: <FileProtectOutlined />,
           label: "O&M shartnoma",
           onClick: () => navigate("/admin/om"),
+        },
+        {
+          key: "/admin/om/report",
+          icon: <FileTextOutlined />,
+          label: "O&M hisobot",
+          onClick: () => navigate("/admin/om/report"),
         },
         // Hidden - Not yet implemented
         // {

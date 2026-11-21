@@ -183,3 +183,90 @@ export interface OmScanResult {
   created: number;
   updated: number;
 }
+
+/** One day of a monthly report: what was made, under how much sun. */
+export interface OmReportDay {
+  date: string;
+  energyKwh: number | null;
+  irradiationKwhM2: number | null;
+  performanceRatio: number | null;
+}
+
+export interface OmReportStation {
+  provider: string;
+  stationId: string;
+  name: string;
+  dcKwp: number;
+  availabilityPct: number | null;
+  usefulMinutes: number;
+  downMinutes: number;
+  excludedMinutes: number;
+  days: OmReportDay[];
+  energyKwh: number;
+  irradiationKwhM2: number;
+  specificYield: number | null;
+  performanceRatio: number | null;
+  missingEnergyDays: number;
+  missingIrradiationDays: number;
+}
+
+export interface OmReportDowntime {
+  station: string;
+  sn: string;
+  start: number;
+  end: number;
+  downMinutes: number;
+  category: ExcusableCategory | null;
+  silent: boolean;
+  causes: string[];
+}
+
+export interface OmReportNotes {
+  maintenance: string | null;
+  spareParts: string | null;
+  hse: string | null;
+  recommendations: string | null;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+
+export interface OmResponseStats {
+  total: number;
+  ongoing: number;
+  resolved: number;
+  response: { onTime: number; late: number; open: number };
+  arrival: { onTime: number; late: number; open: number; notNeeded: number };
+}
+
+/** The monthly report of Annex 5. */
+export interface OmMonthlyReport {
+  contractId: number;
+  contractName: string;
+  customerName: string | null;
+  contractNumber: string | null;
+  month: string;
+  from: string;
+  to: string;
+  complete: boolean;
+  generatedAt: string;
+  summary: {
+    dcKwp: number;
+    energyKwh: number;
+    irradiationKwhM2: number | null;
+    specificYield: number | null;
+    performanceRatio: number | null;
+    availabilityPct: number | null;
+    galPct: number;
+    usefulMinutes: number;
+    downMinutes: number;
+    excludedMinutes: number;
+    incidents: OmResponseStats;
+  };
+  stations: OmReportStation[];
+  days: OmReportDay[];
+  downtime: OmReportDowntime[];
+  excusableEvents: OmExcusableEvent[];
+  incidents: OmIncident[];
+  notes: OmReportNotes;
+  warnings: string[];
+}

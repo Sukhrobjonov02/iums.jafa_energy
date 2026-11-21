@@ -23,6 +23,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant
 import dayjs, { Dayjs } from 'dayjs';
 import { omService } from '../../../service/om.service';
 import type { DeadlineState, IncidentCategory, OmContract, OmIncident } from '../../../types/om';
+import { INCIDENT_UZ } from './om-labels';
 
 const { Text } = Typography;
 
@@ -34,14 +35,6 @@ const formatTime = (t: string): string => {
 const fromPicker = (d: Dayjs | null | undefined) => (d ? `${d.format('YYYY-MM-DDTHH:mm')}:00+05:00` : null);
 const toPicker = (iso: string | null) => (iso ? dayjs(new Date(new Date(iso).getTime() + TASHKENT_MS).toISOString().slice(0, 16)) : null);
 const nowPicker = () => toPicker(new Date().toISOString());
-
-/** Annex 2 of the contract, in Uzbek. */
-const INCIDENT_UZ: Record<IncidentCategory, { label: string; color: string; clocks: string }> = {
-  total: { label: "100% to'xtash", color: 'red', clocks: 'xabar 2 soat, yetib borish 8 soat (24/7)' },
-  major: { label: "30%+ yo'qotish", color: 'volcano', clocks: 'xabar 4 soat, yetib borish 24 soat' },
-  minor: { label: "30% dan kam yo'qotish", color: 'gold', clocks: 'xabar 8 soat, yetib borish 48 soat (ish vaqti)' },
-  noncritical: { label: 'Kritik emas', color: 'default', clocks: 'xabar 24 soat, keyingi rejali tashrifda' },
-};
 
 const Clock: React.FC<{ state: DeadlineState; due: string | null; doneAt: string | null }> = ({ state, due, doneAt }) => {
   switch (state) {

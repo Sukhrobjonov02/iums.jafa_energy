@@ -31,6 +31,7 @@ import { availabilityService } from '../../../service/availability.service';
 import { useAuth } from '../../../helpers/hooks/useAuth';
 import { providerTag } from '../availability/provider-tag';
 import { IncidentsCard } from './incidents-card';
+import { CATEGORY_UZ } from './om-labels';
 import type {
   ExcusableCategory,
   OmAvailabilityReport,
@@ -57,24 +58,6 @@ const formatHours = (minutes: number) =>
   `${new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 1 }).format(minutes / 60)} soat`;
 const formatUzs = (v: number | null) =>
   v === null ? '—' : `${new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 }).format(v)} so'm`;
-
-/** Uzbek names of the Annex 3, Part 2 categories; the contract's English wording is in the tooltip. */
-const CATEGORY_UZ: Record<ExcusableCategory, string> = {
-  customer: 'Mijoz harakati yoki ko\'rsatmasi',
-  third_party_works: 'Mijoz yollagan uchinchi shaxs ishlari',
-  no_access: 'Obyektga kirish berilmadi',
-  grid: 'Tarmoq: uzilish, cheklov, dispetcher buyrug\'i',
-  force_majeure: 'Fors-major',
-  soiling: 'Qor, muz, qum yoki ifloslanish',
-  third_party_damage: 'Uchinchi shaxs shikast yetkazgan',
-  ambient: 'Ob-havo ruxsat etilgan chegaradan tashqari',
-  manufacturer: 'Ishlab chiqaruvchi yordami kerak',
-  communication: 'Monitoring yoki aloqa uzilishi',
-  spare_parts: 'Ehtiyot qism mijoz tufayli kechikdi',
-  scheduled: 'Kelishilgan rejali to\'xtash',
-  epc_defect: 'EPC yoki zavod nuqsoni',
-  suspension: 'Xizmat qonuniy to\'xtatilgan',
-};
 
 const STATUS_UZ: Record<OmExcusableEvent['customerStatus'], { label: string; color: string }> = {
   pending: { label: 'Mijoz tasdig\'i kutilmoqda', color: 'gold' },
