@@ -1,5 +1,5 @@
 import { apiClient } from './api-client';
-import type { ExcusableCategory, OmAvailabilityReport, OmContract, OmExcusableEvent, OmIncident, OmScanResult, OmSuggestResult } from '../types/om';
+import type { ExcusableCategory, OmAvailabilityReport, OmContract, OmExcusableEvent, OmIncident, OmMonthlyReport, OmReportNotes, OmScanResult, OmSuggestResult } from '../types/om';
 
 /** The O&M Agreement: contracts, their Annex 3 availability and the excusable events. */
 class OmService {
@@ -73,6 +73,22 @@ class OmService {
 
   async removeIncident(id: number): Promise<void> {
     await apiClient.delete(`/api/om/incidents/${id}`);
+  }
+
+  /** The monthly report of Annex 5; `month` is YYYY-MM. */
+  async monthlyReport(id: number, month: string): Promise<OmMonthlyReport> {
+    const r = await apiClient.get<{ data: OmMonthlyReport }>(`/api/om/contracts/${id}/monthly-report`, { params: { month } });
+    return r.data.data;
+  }
+
+  async monthlyReportExcel(id: number, month: string): Promise<Blob> {
+    const r = await apiClient.get(`/api/om/contracts/${id}/monthly-report/excel`, { params: { month }, responseType: 'blob' });
+    return r.data;
+  }
+
+  async saveReportNotes(id: number, month: string, notes: Partial<OmReportNotes>): Promise<OmReportNotes> {
+    const r = await apiClient.put<{ data: OmReportNotes }>(`/api/om/contracts/${id}/monthly-report/notes`, notes, { params: { month } });
+    return r.data.data;
   }
 }
 
