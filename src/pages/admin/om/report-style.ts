@@ -45,7 +45,8 @@ export const REPORT_CSS = `
 .om-report thead { display: table-header-group; }
 .om-report tfoot { display: table-row-group; }
 .om-report tr, .om-report table.keep, .om-report .note, .om-report .foot, .om-report .tiles, .om-report .closing { break-inside: avoid; page-break-inside: avoid; }
-.om-report h2, .om-report h3 { break-after: avoid; page-break-after: avoid; }
+.om-report h2, .om-report h3, .om-report .lead { break-after: avoid; page-break-after: avoid; }
+.om-report .foot { break-before: avoid; page-break-before: avoid; }
 .om-report p { orphans: 3; widows: 3; }
 @page { size: A4; margin: 16mm 12mm 15mm; }
 `;
