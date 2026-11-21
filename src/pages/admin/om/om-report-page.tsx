@@ -6,7 +6,7 @@ import { omService } from '../../../service/om.service';
 import { useAuth } from '../../../helpers/hooks/useAuth';
 import type { OmContract, OmPeriodReport, OmReportPeriod } from '../../../types/om';
 import { ReportDocument } from './report-document';
-import { REPORT_CSS } from './report-style';
+import { REPORT_CSS, pageMarginCss, reportTitle } from './report-style';
 
 const { Title, Text } = Typography;
 
@@ -42,13 +42,13 @@ function contractYears(serviceStartDate: string | undefined): { value: number; l
 }
 
 /** Prints the report alone from an empty frame, so the app's layout cannot clip or restyle it. */
-function printReport(node: HTMLElement, title: string) {
+function printReport(node: HTMLElement, title: string, header: string) {
   const frame = document.createElement('iframe');
   frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
   document.body.appendChild(frame);
   const doc = frame.contentDocument!;
   doc.open();
-  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title></title><style>body{margin:0}${REPORT_CSS}</style></head><body></body></html>`);
+  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title></title><style>body{margin:0}${REPORT_CSS}${pageMarginCss(header)}</style></head><body></body></html>`);
   doc.close();
   doc.title = title;
   doc.body.appendChild(doc.importNode(node, true));
@@ -190,7 +190,7 @@ const OmReportPage: React.FC = () => {
             type="primary"
             icon={<PrinterOutlined />}
             disabled={!report}
-            onClick={() => docRef.current && report && printReport(docRef.current, `${FILE_NAME[report.period]} ${report.key} ${report.contractName}`)}
+            onClick={() => docRef.current && report && printReport(docRef.current, `${FILE_NAME[report.period]} ${report.key} ${report.contractName}`, `${reportTitle(report)} · ${report.contractName}`)}
           >
             Chop etish / PDF
           </Button>
