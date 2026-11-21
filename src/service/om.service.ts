@@ -89,6 +89,12 @@ class OmService {
     return r.data;
   }
 
+  /** The report as it stands on the page, made into a PDF by the server so every browser gets the same file. */
+  async reportPdf(html: string, header: string, name: string): Promise<Blob> {
+    const r = await apiClient.post('/api/om/report-pdf', { html, header, name }, { responseType: 'blob', timeout: 90_000 });
+    return r.data;
+  }
+
   /** `key` is the report's own key: "YYYY-MM", or "Y1" for the annual report of Contract Year 1. */
   async saveReportNotes(id: number, key: string, notes: Partial<OmReportNotes>): Promise<OmReportNotes> {
     const r = await apiClient.put<{ data: OmReportNotes }>(`/api/om/contracts/${id}/monthly-report/notes`, notes, { params: { month: key } });

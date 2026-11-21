@@ -397,15 +397,18 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
             <h2>{no.hse}. Mehnat muhofazasi va atrof-muhit bo'yicha hodisalar</h2>
             <Note text={r.notes.hse} />
           </section>
-          <section>
-            <h2>{no.recommendations}. Pudratchining tavsiyalari{yearly ? ' va keyingi yil texnik xizmat jadvali bo\'yicha takliflar' : ''}</h2>
-            <Note text={r.notes.recommendations} />
-          </section>
+          {/* Kept with the section before them, so the signatures never stand alone on a last page. */}
+          <div className="closing">
+            <section>
+              <h2>{no.recommendations}. Pudratchining tavsiyalari{yearly ? ' va keyingi yil texnik xizmat jadvali bo\'yicha takliflar' : ''}</h2>
+              <Note text={r.notes.recommendations} />
+            </section>
 
-          <section className="signatures">
-            <div><b>Pudratchi</b><span>____________________ / ____________________ /</span></div>
-            <div><b>Buyurtmachi</b><span>____________________ / ____________________ /</span></div>
-          </section>
+            <section className="signatures">
+              <div><b>Pudratchi</b><span>____________________ / ____________________ /</span></div>
+              <div><b>Buyurtmachi</b><span>____________________ / ____________________ /</span></div>
+            </section>
+          </div>
         </>
       )}
     </div>
