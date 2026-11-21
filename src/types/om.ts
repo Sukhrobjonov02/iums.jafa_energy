@@ -294,9 +294,107 @@ export interface OmPeriodReport {
   excusableEvents: OmExcusableEvent[];
   incidents: OmIncident[];
   notes: OmReportNotes;
+  /** The three logs over the period (Annex 5 (c), (e), (f)); absent in a daily report's sections. */
+  maintenance: OmMaintenanceWork[];
+  spareMoves: OmSparePartMove[];
+  /** Stock on hand at the end of the period. */
+  stock: OmStockLine[];
+  hse: OmHseEvent[];
+  /** Annual report only: scheduled works counted against Annex 1. */
+  maintenancePlan: OmPlanLine[] | null;
+  journalLabels: Pick<OmJournalLabels, 'maintenanceKinds' | 'spareMoveKinds' | 'hseKinds'>;
   /** Annual report only. */
   months: OmReportMonthRow[] | null;
   /** Annual report only: damages or bonus on the year's availability so far. */
   settlement: OmSettlement | null;
   warnings: string[];
+}
+
+export type MaintenanceKind = 'scheduled' | 'corrective';
+export type SpareMoveKind = 'received' | 'used' | 'inventory';
+export type HseKind = 'injury' | 'near_miss' | 'fire' | 'electrical' | 'environment' | 'property' | 'other';
+
+/** A place an entry of a log refers to: one plant of the contract, or none for the whole site. */
+interface OmJournalPlace {
+  provider: VendorKey | null;
+  stationId: string | null;
+  stationName: string | null;
+}
+
+/** A maintenance work done (Annex 5 (c)). */
+export interface OmMaintenanceWork extends OmJournalPlace {
+  id: number;
+  contractId: number;
+  kind: MaintenanceKind;
+  /** The Annex 1 item a scheduled work answers, "1.1" to "1.12". */
+  item: string | null;
+  /** "YYYY-MM-DD". */
+  performedOn: string;
+  description: string;
+  performedBy: string | null;
+  incidentId: number | null;
+  createdBy: string | null;
+}
+
+/** A line of the spare parts stock movement log (clause 7.6). */
+export interface OmSparePartMove extends OmJournalPlace {
+  id: number;
+  contractId: number;
+  /** "YYYY-MM-DD". */
+  movedOn: string;
+  part: string;
+  partNumber: string | null;
+  kind: SpareMoveKind;
+  quantity: number;
+  unit: string;
+  note: string | null;
+  createdBy: string | null;
+}
+
+export interface OmStockLine {
+  part: string;
+  partNumber: string | null;
+  unit: string;
+  quantity: number;
+  lastInventoryOn: string | null;
+  lastMoveOn: string;
+}
+
+/** An HSE incident and whether the Customer was told within 24 hours (clause 5.1.4). */
+export interface OmHseEvent extends OmJournalPlace {
+  id: number;
+  contractId: number;
+  occurredAt: string;
+  kind: HseKind;
+  description: string;
+  actions: string | null;
+  customerNotifiedAt: string | null;
+  notifiedVia: string | null;
+  noticeDueAt: string;
+  noticeState: DeadlineState;
+  createdBy: string | null;
+}
+
+/** An Annex 1 scheduled work and how often it was done in a Contract Year. */
+export interface OmPlanLine {
+  code: string;
+  label: string;
+  /** Times a year the Agreement asks for; null where it only says "as the norms require". */
+  perYear: number | null;
+  done: number;
+  lastOn: string | null;
+}
+
+export interface OmMaintenancePlan {
+  contractYear: number;
+  from: string;
+  to: string;
+  items: OmPlanLine[];
+}
+
+export interface OmJournalLabels {
+  maintenanceItems: { code: string; label: string; perYear: number | null }[];
+  maintenanceKinds: Record<MaintenanceKind, string>;
+  spareMoveKinds: Record<SpareMoveKind, string>;
+  hseKinds: Record<HseKind, string>;
 }

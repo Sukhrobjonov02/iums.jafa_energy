@@ -48,6 +48,7 @@ const DevicesManagement = lazy(() => import("../pages/admin/devices/devices-mana
 const AvailabilityPage = lazy(() => import("../pages/admin/availability/availability-page"));
 const OmPage = lazy(() => import("../pages/admin/om/om-page"));
 const OmReportPage = lazy(() => import("../pages/admin/om/om-report-page"));
+const OmJournalPage = lazy(() => import("../pages/admin/om/om-journal-page"));
 const TemperaturePage = lazy(() => import("../pages/admin/availability/temperature-page"));
 const PlanPage = lazy(() => import("../pages/admin/plan/plan-page"));
 const HuaweiStations = lazy(() => import("../pages/admin/huawei/huawei-stations"));
@@ -203,6 +204,7 @@ const router = createBrowserRouter(
         <Route path="temperature" element={<Suspense fallback={<PageLoader />}><TemperaturePage /></Suspense>} />
         <Route path="plan" element={<Suspense fallback={<PageLoader />}><PlanPage /></Suspense>} />
         <Route path="om" element={<Suspense fallback={<PageLoader />}><OmPage /></Suspense>} />
+        <Route path="om/journal" element={<Suspense fallback={<PageLoader />}><OmJournalPage /></Suspense>} />
         <Route path="om/report" element={<Suspense fallback={<PageLoader />}><OmReportPage /></Suspense>} />
         <Route path="huawei" element={<Suspense fallback={<PageLoader />}><HuaweiStations /></Suspense>} />
         <Route path="notifications" element={<Suspense fallback={<PageLoader />}><NotificationsManagement /></Suspense>} />

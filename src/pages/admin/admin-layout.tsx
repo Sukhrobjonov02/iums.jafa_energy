@@ -14,6 +14,7 @@ import {
   LineChartOutlined,
   SettingOutlined as DeviceOutlined,
   ThunderboltOutlined,
+  ToolOutlined,
   UserOutlined,
   WifiOutlined,
 } from "@ant-design/icons";
@@ -65,6 +66,12 @@ const AdminLayout: React.FC = () => {
           icon: <FileProtectOutlined />,
           label: "O&M shartnoma",
           onClick: () => navigate("/admin/om"),
+        },
+        {
+          key: "/admin/om/journal",
+          icon: <ToolOutlined />,
+          label: "O&M jurnallar",
+          onClick: () => navigate("/admin/om/journal"),
         },
         {
           key: "/admin/om/report",
