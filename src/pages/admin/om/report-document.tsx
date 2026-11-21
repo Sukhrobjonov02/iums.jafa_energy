@@ -1,5 +1,5 @@
 import React from 'react';
-import type { DeadlineState, OmIncident, OmMonthlyReport } from '../../../types/om';
+import type { DeadlineState, OmIncident, OmPeriodReport } from '../../../types/om';
 import { CATEGORY_UZ, INCIDENT_UZ } from './om-labels';
 import { MONTHS_UZ } from './report-style';
 
@@ -16,6 +16,16 @@ const fixed = (v: number, digits: number) => new Intl.NumberFormat('ru-RU', { ma
 const pct = (v: number | null) => (v === null ? '—' : `${fixed(v, 2)}%`);
 const pr = (v: number | null) => (v === null ? '—' : `${fixed(v * 100, 1)}%`);
 const hours = (minutes: number) => num(minutes / 60, 1);
+const sum = (n: number | null, unit: string) => (n === null ? 'yillik narx kiritilmagan' : `${num(n, 0)} ${unit}`);
+
+/** A year's report lists periods and incidents only while they fit a few pages; the workbook has them all. */
+const YEAR_LIST_LIMIT = 40;
+
+const monthLabel = (m: { month: string; from: string; to: string }) => {
+  const [y, mm] = m.month.split('-').map(Number);
+  const whole = m.from.endsWith('-01') && m.to.slice(8) === String(new Date(Date.UTC(y, mm, 0)).getUTCDate()).padStart(2, '0');
+  return `${MONTHS_UZ[mm - 1]} ${y}${whole ? '' : ` (${m.from.slice(8)}.${m.from.slice(5, 7)}–${m.to.slice(8)}.${m.to.slice(5, 7)})`}`;
+};
 
 const clock = (state: DeadlineState, due: string | null, done: string | null): { text: string; tone: 'ok' | 'bad' | 'warn' | 'none' } => {
   switch (state) {
@@ -38,12 +48,25 @@ const Note: React.FC<{ text: string | null }> = ({ text }) =>
   text ? <p className="note">{text}</p> : <p className="note empty">Bu davr uchun ma'lumot kiritilmagan.</p>;
 
 /**
- * The monthly report as a plain document, in Annex 5's order (a) to (g). Plain HTML with its own
- * stylesheet so the same markup is shown on the page and printed from an empty frame.
+ * A report as a plain document. The monthly one follows Annex 5's order (a) to (g); the daily one
+ * keeps the measured sections only; the annual one swaps the days for months and adds what the
+ * year's availability means in money. Plain HTML with its own stylesheet so the same markup is
+ * shown on the page and printed from an empty frame.
  */
-export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonthlyReport }>(({ report: r }, ref) => {
+export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPeriodReport }>(({ report: r }, ref) => {
   const s = r.summary;
-  const [year, month] = r.month.split('-');
+  const day = r.period === 'day';
+  const yearly = r.period === 'year';
+  const title = day
+    ? `Kunlik hisobot: ${date(r.from)}`
+    : yearly
+      ? `Yillik hisobot: ${r.contractYear}-shartnoma yili`
+      : `Oylik hisobot: ${MONTHS_UZ[Number(r.from.slice(5, 7)) - 1]} ${r.from.slice(0, 4)}`;
+  const running = day ? 'kun hali tugamagan' : yearly ? 'shartnoma yili hali tugamagan' : 'oy hali tugamagan';
+  // The hand-written sections are not part of a daily report, so its incidents come third.
+  const no = day ? { incidents: 3 } : { maintenance: 3, incidents: 4, spareParts: 5, hse: 6, recommendations: 7 };
+  const listed = <T,>(rows: T[]) => !yearly || rows.length <= YEAR_LIST_LIMIT;
+  const total = (rows: { downMinutes: number }[]) => hours(rows.reduce((n, p) => n + p.downMinutes, 0));
   const perStation = r.stations.length > 1 && r.stations.length <= 4;
   const chargeable = r.downtime.filter((p) => p.category === null);
   const excused = r.downtime.filter((p) => p.category !== null);
@@ -53,8 +76,8 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
     <div className="om-report" ref={ref}>
       <header>
         <div className="brand">JAFA ENERGY</div>
-        <h1>Oylik hisobot: {MONTHS_UZ[Number(month) - 1]} {year}</h1>
-        <p className="sub">Ekspluatatsiya va texnik xizmat ko'rsatish (O&amp;M) shartnomasi, Ilova 5</p>
+        <h1>{title}</h1>
+        <p className="sub">Ekspluatatsiya va texnik xizmat ko'rsatish (O&amp;M) shartnomasi{r.period === 'month' ? ', Ilova 5' : ''}</p>
         <table className="meta">
           <tbody>
             <tr><th>Shartnoma</th><td>{r.contractName}{r.contractNumber ? `, № ${r.contractNumber}` : ''}</td></tr>
@@ -62,7 +85,11 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
             <tr><th>Pudratchi</th><td>JAFA ENERGY</td></tr>
             <tr>
               <th>Hisobot davri</th>
-              <td>{date(r.from)} – {date(r.to)}{!r.complete && <strong className="warn"> (oy hali tugamagan, oraliq hisobot)</strong>}</td>
+              <td>
+                {day ? date(r.from) : `${date(r.from)} – ${date(r.to)}`}
+                {yearly && !r.complete && ` (shartnoma yili ${date(r.periodTo)} da tugaydi)`}
+                {!r.complete && <strong className="warn"> ({running}, oraliq hisobot)</strong>}
+              </td>
             </tr>
             <tr><th>Tuzilgan vaqt</th><td>{time(r.generatedAt)} (Toshkent vaqti), IUMS monitoring tizimi ma'lumotlari asosida</td></tr>
           </tbody>
@@ -104,6 +131,36 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
           )}
         </table>
 
+        {yearly && r.months && (
+          <>
+            <h3>Oylar bo'yicha</h3>
+            <table className="compact">
+              <thead>
+                <tr>
+                  <th>Oy</th><th className="r">Energiya, kVt·soat</th><th className="r">Nurlanish, kVt·soat/m²</th>
+                  <th className="r">kVt·soat/kWp</th><th className="r">PR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.months.map((m) => (
+                  <tr key={m.month}>
+                    <td>{monthLabel(m)}</td><td className="r">{num(m.energyKwh, 0)}</td><td className="r">{num(m.irradiationKwhM2, 1)}</td>
+                    <td className="r">{num(m.specificYield, 1)}</td><td className="r">{pr(m.performanceRatio)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>Jami</td><td className="r">{num(s.energyKwh, 0)}</td><td className="r">{num(s.irradiationKwhM2, 1)}</td>
+                  <td className="r">{num(s.specificYield, 1)}</td><td className="r">{pr(s.performanceRatio)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </>
+        )}
+
+        {r.period === 'month' && (
+          <>
         <h3>Kunlar bo'yicha</h3>
         <table className="compact">
           <thead>
@@ -124,15 +181,17 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
             ))}
           </tbody>
         </table>
+          </>
+        )}
         <p className="foot">
           Energiya: invertor ishlab chiqaruvchisi bulutining kunlik hisoboti. Nurlanish: obyekt joylashuvi uchun sun'iy yo'ldosh ma'lumoti
           (Open-Meteo), gorizontal tekislikda. PR = energiya ÷ (nurlanish × DC quvvat); nurlanish panel tekisligida o'lchanmagani uchun
-          ma'lumot tariqasida beriladi. "—" shu kun uchun ma'lumot yo'qligini bildiradi.
+          ma'lumot tariqasida beriladi. "—" ma'lumot yo'qligini bildiradi.
         </p>
       </section>
 
       <section>
-        <h2>2. Availability hisobi (ma'lumot uchun)</h2>
+        <h2>2. Availability hisobi{yearly ? '' : " (ma'lumot uchun)"}</h2>
         <table>
           <thead>
             <tr>
@@ -157,12 +216,67 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
         </table>
         <p className="foot">
           Ilova 3 bo'yicha: nurlanish 75 W/m² dan yuqori bo'lgan 15 daqiqalik oraliqlar foydali vaqt hisoblanadi.
-          Availability = (foydali vaqt − to'xtash + uzrli to'xtash) ÷ foydali vaqt. Kafolatlangan daraja {s.galPct}%; jarima va bonus
-          shartnoma yili yakuni bo'yicha hisoblanadi.
+          Availability = (foydali vaqt − to'xtash + uzrli to'xtash) ÷ foydali vaqt. Kafolatlangan daraja {s.galPct}%
+          {yearly ? '.' : '; jarima va bonus shartnoma yili yakuni bo\'yicha hisoblanadi.'}
         </p>
 
+        {yearly && r.months && (
+          <>
+            <h3>Oylar bo'yicha</h3>
+            <table className="compact">
+              <thead>
+                <tr>
+                  <th>Oy</th><th className="r">Foydali vaqt, soat</th><th className="r">To'xtash, soat</th>
+                  <th className="r">Shundan uzrli, soat</th><th className="r">Availability</th><th className="r">Hodisalar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.months.map((m) => (
+                  <tr key={m.month}>
+                    <td>{monthLabel(m)}</td><td className="r">{hours(m.usefulMinutes)}</td><td className="r">{hours(m.downMinutes)}</td>
+                    <td className="r">{hours(m.excludedMinutes)}</td><td className="r">{pct(m.availabilityPct)}</td><td className="r">{m.incidents}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="foot">Yillik Availability oylik ko'rsatkichlarning o'rtachasi emas: u butun yilning foydali vaqti bo'yicha hisoblanadi.</p>
+          </>
+        )}
+
+        {yearly && r.settlement && (
+          <>
+            <h3>Shartnoma yili bo'yicha hisob-kitob (8.2 va 8.3-bandlar)</h3>
+            <table className="meta">
+              <tbody>
+                <tr><th>Yillik Availability</th><td><b>{pct(r.settlement.availabilityPct)}</b> (kafolatlangan daraja {s.galPct}%)</td></tr>
+                <tr>
+                  <th>Jarima</th>
+                  <td>
+                    {r.settlement.ldPct > 0
+                      ? `kafolatdan ${num(r.settlement.shortfallPts, 2)} foiz punkti kam: yillik narxning ${num(r.settlement.ldPct, 3)}%, ${sum(r.settlement.ldUzs, "so'm")}`
+                      : "yo'q (Availability kafolatdan past emas)"}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Bonus</th>
+                  <td>
+                    {r.settlement.bonusPct > 0
+                      ? `bonus chegarasidan ${num(r.settlement.excessPts, 2)} foiz punkti yuqori: yillik narxning ${num(r.settlement.bonusPct, 3)}%, ${sum(r.settlement.bonusUzs, "so'm")}`
+                      : "yo'q"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            {!r.complete && <p className="foot warn">Shartnoma yili tugamagan: bu hozirgacha bo'lgan holat, yakuniy hisob yil tugagach chiqadi.</p>}
+          </>
+        )}
+
         <h3>To'xtash davrlari (Pudratchi hisobiga)</h3>
-        {chargeable.length ? (
+        {!listed(chargeable) ? (
+          <p className="note">
+            Jami {chargeable.length} ta davr, {total(chargeable)} soat. To'liq ro'yxat oylik hisobotlarda va Excel faylida.
+          </p>
+        ) : chargeable.length ? (
           <table className="compact">
             <thead><tr><th>Obyekt</th><th>Invertor</th><th>Boshlandi</th><th>Tugadi</th><th className="r">Soat</th><th>Izoh</th></tr></thead>
             <tbody>
@@ -179,7 +293,11 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
         )}
 
         <h3>Uzrli to'xtash davrlari</h3>
-        {excused.length ? (
+        {!listed(excused) ? (
+          <p className="note">
+            Jami {excused.length} ta davr, {total(excused)} soat. To'liq ro'yxat oylik hisobotlarda va Excel faylida.
+          </p>
+        ) : excused.length ? (
           <table className="compact">
             <thead><tr><th>Obyekt</th><th>Invertor</th><th>Boshlandi</th><th>Tugadi</th><th className="r">Soat</th><th>Asos (Ilova 3, 2.1)</th></tr></thead>
             <tbody>
@@ -195,7 +313,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
           <p className="note">Bu davrda uzrli to'xtash bo'lmagan.</p>
         )}
 
-        {r.excusableEvents.length > 0 && (
+        {r.excusableEvents.length > 0 && listed(r.excusableEvents) && (
           <>
             <h3>Qayd etilgan uzrli hodisalar</h3>
             <table className="compact">
@@ -213,13 +331,15 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
         )}
       </section>
 
-      <section>
-        <h2>3. Bajarilgan rejali va tuzatish texnik xizmat ishlari</h2>
-        <Note text={r.notes.maintenance} />
-      </section>
+      {!day && (
+        <section>
+          <h2>{no.maintenance}. Bajarilgan rejali va tuzatish texnik xizmat ishlari</h2>
+          <Note text={r.notes.maintenance} />
+        </section>
+      )}
 
       <section>
-        <h2>4. Hodisalar jurnali va javob vaqtlari</h2>
+        <h2>{no.incidents}. Hodisalar jurnali va javob vaqtlari</h2>
         {r.incidents.length ? (
           <>
             <p className="note">
@@ -227,6 +347,9 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
               kech, {s.incidents.response.open} ta berilmagan. Obyektga borish: {s.incidents.arrival.onTime} ta o'z vaqtida, {s.incidents.arrival.late} ta
               kech, {s.incidents.arrival.open} ta bajarilmagan, {s.incidents.arrival.notNeeded} ta kerak bo'lmagan.
             </p>
+            {!listed(r.incidents) ? (
+              <p className="note">To'liq jurnal oylik hisobotlarda va Excel faylida.</p>
+            ) : (
             <table className="compact">
               <thead>
                 <tr><th>№</th><th>Obyekt</th><th>Toifa</th><th>Aniqlangan</th><th>Tiklangan</th><th>Buyurtmachiga xabar</th><th>Obyektga borish</th><th>Sabab</th></tr>
@@ -246,6 +369,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
                 })}
               </tbody>
             </table>
+            )}
             <p className="foot">
               Muddatlar (Ilova 2): 100% to'xtash: xabar 2 soat, borish 8 soat; 30% va undan ko'p yo'qotish: 4 va 24 soat; 30% dan kam: 8 va 48 soat;
               kritik bo'lmagan: 24 soat va keyingi rejali tashrif. Muddat nosozlik aniqlangan paytdan hisoblanadi.
@@ -256,23 +380,27 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmMonth
         )}
       </section>
 
-      <section>
-        <h2>5. Ishlatilgan ehtiyot qismlar va ombor holati</h2>
-        <Note text={r.notes.spareParts} />
-      </section>
-      <section>
-        <h2>6. Mehnat muhofazasi va atrof-muhit bo'yicha hodisalar</h2>
-        <Note text={r.notes.hse} />
-      </section>
-      <section>
-        <h2>7. Pudratchining tavsiyalari</h2>
-        <Note text={r.notes.recommendations} />
-      </section>
+      {!day && (
+        <>
+          <section>
+            <h2>{no.spareParts}. Ishlatilgan ehtiyot qismlar va ombor holati</h2>
+            <Note text={r.notes.spareParts} />
+          </section>
+          <section>
+            <h2>{no.hse}. Mehnat muhofazasi va atrof-muhit bo'yicha hodisalar</h2>
+            <Note text={r.notes.hse} />
+          </section>
+          <section>
+            <h2>{no.recommendations}. Pudratchining tavsiyalari{yearly ? ' va keyingi yil texnik xizmat jadvali bo\'yicha takliflar' : ''}</h2>
+            <Note text={r.notes.recommendations} />
+          </section>
 
-      <section className="signatures">
-        <div><b>Pudratchi</b><span>____________________ / ____________________ /</span></div>
-        <div><b>Buyurtmachi</b><span>____________________ / ____________________ /</span></div>
-      </section>
+          <section className="signatures">
+            <div><b>Pudratchi</b><span>____________________ / ____________________ /</span></div>
+            <div><b>Buyurtmachi</b><span>____________________ / ____________________ /</span></div>
+          </section>
+        </>
+      )}
     </div>
   );
 });

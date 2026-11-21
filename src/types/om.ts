@@ -238,15 +238,41 @@ export interface OmResponseStats {
   arrival: { onTime: number; late: number; open: number; notNeeded: number };
 }
 
-/** The monthly report of Annex 5. */
-export interface OmMonthlyReport {
+export type OmReportPeriod = 'day' | 'month' | 'year';
+
+/** One calendar month of a Contract Year, or the part of it the year covers. */
+export interface OmReportMonthRow {
+  month: string;
+  from: string;
+  to: string;
+  energyKwh: number;
+  irradiationKwhM2: number | null;
+  specificYield: number | null;
+  performanceRatio: number | null;
+  availabilityPct: number | null;
+  usefulMinutes: number;
+  downMinutes: number;
+  excludedMinutes: number;
+  incidents: number;
+}
+
+/** A daily, monthly (Annex 5) or annual report of one contract. */
+export interface OmPeriodReport {
+  period: OmReportPeriod;
+  /** What the hand-written sections are filed under: "YYYY-MM" for a month, "Y1" for Contract Year 1. */
+  key: string;
   contractId: number;
   contractName: string;
   customerName: string | null;
   contractNumber: string | null;
-  month: string;
+  serviceStartDate: string;
+  month: string | null;
+  contractYear: number | null;
   from: string;
+  /** Last day covered: the period's end, or today while it is running. */
   to: string;
+  /** The period's own last day, reached or not. */
+  periodTo: string;
   complete: boolean;
   generatedAt: string;
   summary: {
@@ -268,5 +294,9 @@ export interface OmMonthlyReport {
   excusableEvents: OmExcusableEvent[];
   incidents: OmIncident[];
   notes: OmReportNotes;
+  /** Annual report only. */
+  months: OmReportMonthRow[] | null;
+  /** Annual report only: damages or bonus on the year's availability so far. */
+  settlement: OmSettlement | null;
   warnings: string[];
 }
