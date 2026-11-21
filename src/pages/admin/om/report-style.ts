@@ -44,7 +44,7 @@ export const REPORT_CSS = `
 .om-report .signatures span { display: block; margin-top: 28px; }
 .om-report thead { display: table-header-group; }
 .om-report tfoot { display: table-row-group; }
-.om-report tr, .om-report table.keep, .om-report .note, .om-report .foot, .om-report .tiles { break-inside: avoid; page-break-inside: avoid; }
+.om-report tr, .om-report table.keep, .om-report .note, .om-report .foot, .om-report .tiles, .om-report .closing { break-inside: avoid; page-break-inside: avoid; }
 .om-report h2, .om-report h3 { break-after: avoid; page-break-after: avoid; }
 .om-report p { orphans: 3; widows: 3; }
 @page { size: A4; margin: 16mm 12mm 15mm; }
@@ -54,8 +54,9 @@ export const REPORT_CSS = `
 const cssString = (text: string) => `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/</g, '\\3c ').replace(/[\r\n]+/g, ' ')}"`;
 
 /**
- * The printed page's own header and footer: who made the report, what it is, and the page number.
- * With these set the browser leaves out its own line of page title, address and date.
+ * The page header and footer for printing from the browser: who made the report, what it is, and
+ * the page number. Chrome and Edge then leave out their own line of page title, address and date;
+ * Firefox and Safari ignore these rules, which is why the PDF button has the server make the file.
  */
 export const pageMarginCss = (title: string) => `
 @page {
@@ -65,3 +66,7 @@ export const pageMarginCss = (title: string) => `
   @bottom-right { content: counter(page) " / " counter(pages); font: 9px Arial, sans-serif; color: #52606d; }
 }
 `;
+
+/** The report as a document of its own: what the print frame shows and what the server turns into a PDF. */
+export const reportDocumentHtml = (reportHtml: string, extraCss = '') =>
+  `<!doctype html><html><head><meta charset="utf-8"><title></title><style>body{margin:0}${REPORT_CSS}${extraCss}</style></head><body>${reportHtml}</body></html>`;

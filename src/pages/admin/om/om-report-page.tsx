@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Card, DatePicker, Empty, Form, Input, Segmented, Select, Space, Spin, Typography, message } from 'antd';
-import { FileExcelOutlined, PrinterOutlined, SaveOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, FilePdfOutlined, PrinterOutlined, SaveOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { omService } from '../../../service/om.service';
 import { useAuth } from '../../../helpers/hooks/useAuth';
 import type { OmContract, OmPeriodReport, OmReportPeriod } from '../../../types/om';
 import { ReportDocument } from './report-document';
-import { REPORT_CSS, pageMarginCss, reportTitle } from './report-style';
+import { REPORT_CSS, pageMarginCss, reportDocumentHtml, reportTitle } from './report-style';
 
 const { Title, Text } = Typography;
 
@@ -48,10 +48,9 @@ function printReport(node: HTMLElement, title: string, header: string) {
   document.body.appendChild(frame);
   const doc = frame.contentDocument!;
   doc.open();
-  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title></title><style>body{margin:0}${REPORT_CSS}${pageMarginCss(header)}</style></head><body></body></html>`);
+  doc.write(reportDocumentHtml(node.outerHTML, pageMarginCss(header)));
   doc.close();
   doc.title = title;
-  doc.body.appendChild(doc.importNode(node, true));
   const win = frame.contentWindow!;
   win.focus();
   win.print();
@@ -72,6 +71,7 @@ const OmReportPage: React.FC = () => {
   const [failed, setFailed] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [form] = Form.useForm();
   const docRef = useRef<HTMLDivElement>(null);
   const years = useMemo(() => contractYears(contracts.find((c) => c.id === selected)?.serviceStartDate), [contracts, selected]);
@@ -137,17 +137,34 @@ const OmReportPage: React.FC = () => {
     }
   };
 
+  const save = (blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const pdf = async () => {
+    if (!docRef.current || !report) return;
+    setPrinting(true);
+    try {
+      const name = `${FILE_NAME[report.period]} ${report.key} ${report.contractName}`;
+      const blob = await omService.reportPdf(reportDocumentHtml(docRef.current.outerHTML), `${reportTitle(report)} · ${report.contractName}`, name);
+      save(blob, `${name}.pdf`);
+    } catch {
+      message.error("PDF ni tayyorlab bo'lmadi. Hozircha \"Chop etish\" tugmasidan foydalaning.");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const excel = async () => {
     if (!selected || key === null || !report) return;
     setDownloading(true);
     try {
-      const blob = await omService.reportExcel(selected, period, key);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${FILE_NAME[period]}-${report.key}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
+      save(await omService.reportExcel(selected, period, key), `${FILE_NAME[period]}-${report.key}.xlsx`);
     } catch {
       message.error("Excel faylni olib bo'lmadi");
     } finally {
@@ -186,13 +203,13 @@ const OmReportPage: React.FC = () => {
             <Select style={{ minWidth: 250 }} value={yearKey ?? undefined} placeholder="Shartnoma yili" onChange={setYear} options={years} />
           )}
           <Button icon={<FileExcelOutlined />} loading={downloading} disabled={!report} onClick={excel}>Excel</Button>
+          <Button type="primary" icon={<FilePdfOutlined />} loading={printing} disabled={!report} onClick={pdf}>PDF</Button>
           <Button
-            type="primary"
             icon={<PrinterOutlined />}
             disabled={!report}
             onClick={() => docRef.current && report && printReport(docRef.current, `${FILE_NAME[report.period]} ${report.key} ${report.contractName}`, `${reportTitle(report)} · ${report.contractName}`)}
           >
-            Chop etish / PDF
+            Chop etish
           </Button>
         </Space>
       </Space>
