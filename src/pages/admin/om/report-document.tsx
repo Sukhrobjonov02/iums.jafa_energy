@@ -349,7 +349,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
         <h2>{no.incidents}. Hodisalar jurnali va javob vaqtlari</h2>
         {r.incidents.length ? (
           <>
-            <p className="note">
+            <p className="note lead">
               Jami {s.incidents.total} ta hodisa. Buyurtmachiga xabar: {s.incidents.response.onTime} ta o'z vaqtida, {s.incidents.response.late} ta
               kech, {s.incidents.response.open} ta berilmagan. Obyektga borish: {s.incidents.arrival.onTime} ta o'z vaqtida, {s.incidents.arrival.late} ta
               kech, {s.incidents.arrival.open} ta bajarilmagan, {s.incidents.arrival.notNeeded} ta kerak bo'lmagan.
