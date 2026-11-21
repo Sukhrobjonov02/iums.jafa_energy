@@ -55,6 +55,9 @@ const Clock: React.FC<{ c: ReturnType<typeof clock>; via?: string | null }> = ({
 const Note: React.FC<{ text: string | null }> = ({ text }) =>
   text ? <p className="note">{text}</p> : <p className="note empty">Bu davr uchun ma'lumot kiritilmagan.</p>;
 
+/** What staff typed under a section whose figures come from a log: shown only when there is something. */
+const Remark: React.FC<{ text: string | null }> = ({ text }) => (text ? <p className="note"><b>Izoh.</b> {text}</p> : null);
+
 /**
  * A report as a plain document. The monthly one follows Annex 5's order (a) to (g); the daily one
  * keeps the measured sections only; the annual one swaps the days for months and adds what the
@@ -79,6 +82,15 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
   const chargeable = r.downtime.filter((p) => p.category === null);
   const excused = r.downtime.filter((p) => p.category !== null);
   const station = (i: OmIncident) => i.stationName ?? r.stations.find((st) => st.provider === i.provider && st.stationId === i.stationId)?.name ?? i.stationId;
+  // An entry of a log is about one plant or about the site as a whole.
+  const place = (e: { provider: string | null; stationId: string | null; stationName: string | null }) =>
+    e.provider && e.stationId ? e.stationName ?? r.stations.find((st) => st.provider === e.provider && st.stationId === e.stationId)?.name ?? e.stationId : 'umumiy';
+  const works = r.maintenance ?? [];
+  const moves = r.spareMoves ?? [];
+  const stock = r.stock ?? [];
+  const hse = r.hse ?? [];
+  const scheduled = works.filter((w) => w.kind === 'scheduled').length;
+  const usedMoves = moves.filter((m) => m.kind === 'used').length;
 
   return (
     <div className="om-report" ref={ref}>
@@ -341,7 +353,59 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
       {!day && (
         <section>
           <h2>{no.maintenance}. Bajarilgan rejali va tuzatish texnik xizmat ishlari</h2>
-          <Note text={r.notes.maintenance} />
+          {works.length ? (
+            <>
+              <p className="note lead">Jami {works.length} ta ish: {scheduled} ta rejali, {works.length - scheduled} ta tuzatish (rejadan tashqari).</p>
+              {!listed(works) ? (
+                <p className="note">To'liq ro'yxat oylik hisobotlarda va Excel faylida.</p>
+              ) : (
+                <table className={`compact${keep(works.length)}`}>
+                  <thead>
+                    <tr><th>Sana</th><th>Obyekt</th><th>Turi</th><th>Bajarilgan ish</th><th>Bajaruvchi</th></tr>
+                  </thead>
+                  <tbody>
+                    {works.map((w) => (
+                      <tr key={w.id}>
+                        <td className="nw">{date(w.performedOn)}</td>
+                        <td>{place(w)}</td>
+                        <td>
+                          {w.kind === 'scheduled' ? 'Rejali' : 'Tuzatish'}
+                          {w.item ? `, Ilova 1: ${w.item}` : ''}
+                          {w.incidentId ? `, hodisa № ${w.incidentId}` : ''}
+                        </td>
+                        <td>{w.description}</td>
+                        <td>{w.performedBy ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          ) : (
+            !r.notes.maintenance && <p className="note">Bu davrda texnik xizmat ishi qayd etilmagan.</p>
+          )}
+          {r.maintenancePlan && (
+            <>
+              <h3>Rejali ishlar jadvalining bajarilishi (Ilova 1)</h3>
+              <table className="compact keep">
+                <thead>
+                  <tr><th>Band</th><th>Ish</th><th className="r">Yiliga kamida</th><th className="r">Bajarildi</th><th>Oxirgi marta</th></tr>
+                </thead>
+                <tbody>
+                  {r.maintenancePlan.map((l) => (
+                    <tr key={l.code}>
+                      <td>{l.code}</td>
+                      <td>{l.label}</td>
+                      <td className="r">{l.perYear ?? "me'yor bo'yicha"}</td>
+                      <td className={`r${l.perYear !== null && r.complete && l.done < l.perYear ? ' bad' : ''}`}>{l.done}</td>
+                      <td className="nw">{l.lastOn ? date(l.lastOn) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+          <Remark text={r.notes.maintenance} />
         </section>
       )}
 
@@ -391,11 +455,86 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
         <>
           <section>
             <h2>{no.spareParts}. Ishlatilgan ehtiyot qismlar va ombor holati</h2>
-            <Note text={r.notes.spareParts} />
+            {moves.length ? (
+              <>
+                <p className="note lead">
+                  Davrda {moves.length} ta harakat qayd etilgan, shundan {usedMoves} tasi ehtiyot qism ishlatilishi.
+                </p>
+                {!listed(moves) ? (
+                  <p className="note">To'liq jurnal oylik hisobotlarda va Excel faylida.</p>
+                ) : (
+                  <table className={`compact${keep(moves.length)}`}>
+                    <thead>
+                      <tr><th>Sana</th><th>Ehtiyot qism</th><th>Raqami</th><th>Harakat</th><th className="r">Miqdor</th><th>Qayerga ishlatildi</th><th>Izoh</th></tr>
+                    </thead>
+                    <tbody>
+                      {moves.map((m) => (
+                        <tr key={m.id}>
+                          <td className="nw">{date(m.movedOn)}</td>
+                          <td>{m.part}</td>
+                          <td>{m.partNumber ?? '—'}</td>
+                          <td>{r.journalLabels.spareMoveKinds[m.kind]}</td>
+                          <td className="r nw">{num(m.quantity, 2)} {m.unit}</td>
+                          <td>{m.kind === 'used' ? place(m) : '—'}</td>
+                          <td>{m.note ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </>
+            ) : (
+              <p className="note">Bu davrda ehtiyot qism ishlatilmagan va omborda harakat bo'lmagan.</p>
+            )}
+            {stock.length > 0 && (
+              <>
+                <h3>Ombor holati, {date(r.to)}</h3>
+                <table className={`compact${keep(stock.length)}`}>
+                  <thead>
+                    <tr><th>Ehtiyot qism</th><th>Raqami</th><th className="r">Qoldiq</th><th>Oxirgi inventarizatsiya</th></tr>
+                  </thead>
+                  <tbody>
+                    {stock.map((l) => (
+                      <tr key={`${l.part}|${l.partNumber ?? ''}`}>
+                        <td>{l.part}</td>
+                        <td>{l.partNumber ?? '—'}</td>
+                        <td className="r nw">{num(l.quantity, 2)} {l.unit}</td>
+                        <td className="nw">{l.lastInventoryOn ? date(l.lastInventoryOn) : "o'tkazilmagan"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+            <Remark text={r.notes.spareParts} />
           </section>
           <section>
             <h2>{no.hse}. Mehnat muhofazasi va atrof-muhit bo'yicha hodisalar</h2>
-            <Note text={r.notes.hse} />
+            {hse.length ? (
+              <>
+                <table className={`compact${keep(hse.length)}`}>
+                  <thead>
+                    <tr><th>Vaqti</th><th>Obyekt</th><th>Turi</th><th>Nima bo'ldi</th><th>Ko'rilgan choralar</th><th>Buyurtmachiga xabar</th></tr>
+                  </thead>
+                  <tbody>
+                    {hse.map((e) => (
+                      <tr key={e.id}>
+                        <td className="nw">{time(e.occurredAt)}</td>
+                        <td>{place(e)}</td>
+                        <td>{r.journalLabels.hseKinds[e.kind]}</td>
+                        <td>{e.description}</td>
+                        <td>{e.actions ?? '—'}</td>
+                        <Clock c={clock(e.noticeState, e.noticeDueAt, e.customerNotifiedAt)} via={e.customerNotifiedAt ? e.notifiedVia : null} />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="foot">Shartnomaning 5.1.4-bandi: HSE hodisasi haqida Buyurtmachiga 24 soat ichida xabar beriladi.</p>
+              </>
+            ) : (
+              <p className="note">Bu davrda mehnat muhofazasi va atrof-muhit bo'yicha hodisa qayd etilmagan.</p>
+            )}
+            <Remark text={r.notes.hse} />
           </section>
           {/* Kept with the section before them, so the signatures never stand alone on a last page. */}
           <div className="closing">

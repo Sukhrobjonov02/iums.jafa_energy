@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Card, DatePicker, Empty, Form, Input, Segmented, Select, Space, Spin, Typography, message } from 'antd';
 import { FileExcelOutlined, FilePdfOutlined, PrinterOutlined, SaveOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
+import { Link } from 'react-router-dom';
 import { omService } from '../../../service/om.service';
 import { useAuth } from '../../../helpers/hooks/useAuth';
 import type { OmContract, OmPeriodReport, OmReportPeriod } from '../../../types/om';
@@ -228,19 +229,19 @@ const OmReportPage: React.FC = () => {
               {canEdit && report.period !== 'day' && (
                 <Card
                   size="small"
-                  title="Qo'lda to'ldiriladigan bo'limlar"
+                  title="Qo'lda yoziladigan izoh va tavsiyalar"
                   extra={<Button size="small" type="primary" icon={<SaveOutlined />} loading={saving} onClick={saveNotes}>Saqlash</Button>}
                 >
                   <Form form={form} layout="vertical">
                     <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
-                      <Form.Item name="maintenance" label="3. Bajarilgan texnik xizmat ishlari" style={{ margin: 0 }}>
-                        <Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} placeholder="Masalan: 12.10 panellar yuvildi; 20.10 invertor ulanishlari tekshirildi" />
+                      <Form.Item name="maintenance" label="3. Texnik xizmat ishlari bo'yicha izoh" style={{ margin: 0 }}>
+                        <Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} placeholder="Ishlar ro'yxati jurnaldan o'zi chiqadi. Bu yerga faqat qo'shimcha izoh yoziladi." />
                       </Form.Item>
-                      <Form.Item name="spareParts" label="5. Ehtiyot qismlar va ombor holati" style={{ margin: 0 }}>
-                        <Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} placeholder="Masalan: ehtiyot qism ishlatilmadi" />
+                      <Form.Item name="spareParts" label="5. Ehtiyot qismlar bo'yicha izoh" style={{ margin: 0 }}>
+                        <Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} placeholder="Harakatlar va ombor qoldig'i jurnaldan o'zi chiqadi. Bu yerga faqat qo'shimcha izoh yoziladi." />
                       </Form.Item>
-                      <Form.Item name="hse" label="6. Mehnat muhofazasi va atrof-muhit hodisalari" style={{ margin: 0 }}>
-                        <Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} placeholder="Masalan: hodisa qayd etilmadi" />
+                      <Form.Item name="hse" label="6. HSE hodisalari bo'yicha izoh" style={{ margin: 0 }}>
+                        <Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} placeholder="Hodisalar jurnaldan o'zi chiqadi. Bu yerga faqat qo'shimcha izoh yoziladi." />
                       </Form.Item>
                       <Form.Item
                         name="recommendations"
@@ -260,6 +261,7 @@ const OmReportPage: React.FC = () => {
                   </Form>
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     Bu matnlar shu {report.period === 'year' ? 'yil' : 'oy'} hisobotining tegishli bo'limlariga chiqadi. Saqlagandan keyin pastdagi hisobotda ko'rinadi.
+                    Bajarilgan ishlar, ehtiyot qismlar va HSE hodisalarining o'zi <Link to="/admin/om/journal">O&M jurnallar</Link> sahifasida kiritiladi.
                   </Text>
                 </Card>
               )}
