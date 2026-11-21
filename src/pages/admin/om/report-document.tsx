@@ -1,7 +1,7 @@
 import React from 'react';
 import type { DeadlineState, OmIncident, OmPeriodReport } from '../../../types/om';
 import { CATEGORY_UZ, INCIDENT_UZ } from './om-labels';
-import { MONTHS_UZ } from './report-style';
+import { MONTHS_UZ, reportTitle } from './report-style';
 
 const TASHKENT_MS = 5 * 3_600_000;
 const time = (t: number | string | null): string => {
@@ -27,14 +27,15 @@ const monthLabel = (m: { month: string; from: string; to: string }) => {
   return `${MONTHS_UZ[mm - 1]} ${y}${whole ? '' : ` (${m.from.slice(8)}.${m.from.slice(5, 7)}–${m.to.slice(8)}.${m.to.slice(5, 7)})`}`;
 };
 
-const clock = (state: DeadlineState, due: string | null, done: string | null): { text: string; tone: 'ok' | 'bad' | 'warn' | 'none' } => {
+/** How an incident stood against one of Annex 2's clocks: what happened, and under it the deadline. */
+const clock = (state: DeadlineState, due: string | null, done: string | null): { text: string; sub?: string; tone: 'ok' | 'bad' | 'warn' | 'none' } => {
   switch (state) {
     case 'done':
-      return { text: `${time(done)} (o'z vaqtida)`, tone: 'ok' };
+      return { text: time(done), sub: "o'z vaqtida", tone: 'ok' };
     case 'late':
-      return { text: `${time(done)} (kech, muddat ${time(due)})`, tone: 'warn' };
+      return { text: `${time(done)} (kech)`, sub: `muddat ${time(due)}`, tone: 'warn' };
     case 'overdue':
-      return { text: `bajarilmagan (muddat ${time(due)})`, tone: 'bad' };
+      return { text: 'bajarilmagan', sub: `muddat ${time(due)}`, tone: 'bad' };
     case 'pending':
       return { text: `muddat ${time(due)}`, tone: 'none' };
     case 'not_needed':
@@ -43,6 +44,13 @@ const clock = (state: DeadlineState, due: string | null, done: string | null): {
       return { text: 'keyingi rejali tashrifda', tone: 'none' };
   }
 };
+
+const Clock: React.FC<{ c: ReturnType<typeof clock>; via?: string | null }> = ({ c, via }) => (
+  <td className={c.tone}>
+    <span className="nw">{c.text}{via ? `, ${via}` : ''}</span>
+    {c.sub && <><br /><span className="nw">{c.sub}</span></>}
+  </td>
+);
 
 const Note: React.FC<{ text: string | null }> = ({ text }) =>
   text ? <p className="note">{text}</p> : <p className="note empty">Bu davr uchun ma'lumot kiritilmagan.</p>;
@@ -57,12 +65,10 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
   const s = r.summary;
   const day = r.period === 'day';
   const yearly = r.period === 'year';
-  const title = day
-    ? `Kunlik hisobot: ${date(r.from)}`
-    : yearly
-      ? `Yillik hisobot: ${r.contractYear}-shartnoma yili`
-      : `Oylik hisobot: ${MONTHS_UZ[Number(r.from.slice(5, 7)) - 1]} ${r.from.slice(0, 4)}`;
-  const running = day ? 'kun hali tugamagan' : yearly ? 'shartnoma yili hali tugamagan' : 'oy hali tugamagan';
+  const title = reportTitle(r);
+  const running = day ? 'kun hali tugamagan' : yearly ? `shartnoma yili ${date(r.periodTo)} da tugaydi` : 'oy hali tugamagan';
+  // A short table is kept on one page; a long one may run over and repeats its header.
+  const keep = (rows: number) => (rows <= 25 ? ' keep' : '');
   // The hand-written sections are not part of a daily report, so its incidents come third.
   const no = day ? { incidents: 3 } : { maintenance: 3, incidents: 4, spareParts: 5, hse: 6, recommendations: 7 };
   const listed = <T,>(rows: T[]) => !yearly || rows.length <= YEAR_LIST_LIMIT;
@@ -89,8 +95,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
               <th>Hisobot davri</th>
               <td>
                 {day ? date(r.from) : `${date(r.from)} – ${date(r.to)}`}
-                {yearly && !r.complete && ` (shartnoma yili ${date(r.periodTo)} da tugaydi)`}
-                {!r.complete && <strong className="warn"> ({running}, oraliq hisobot)</strong>}
+                {!r.complete && <strong className="warn"> (oraliq hisobot: {running})</strong>}
               </td>
             </tr>
             <tr><th>Tuzilgan vaqt</th><td>{time(r.generatedAt)} (Toshkent vaqti), IUMS monitoring tizimi ma'lumotlari asosida</td></tr>
@@ -99,8 +104,8 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
       </header>
 
       <section className="tiles">
-        <div><span>Ishlab chiqarilgan energiya</span><b>{num(s.energyKwh, 0)} kVt·soat</b></div>
-        <div><span>Nurlanish (gorizontal)</span><b>{num(s.irradiationKwhM2, 1)} kVt·soat/m²</b></div>
+        <div><span>Ishlab chiqarilgan energiya, kVt·soat</span><b>{num(s.energyKwh, 0)}</b></div>
+        <div><span>Nurlanish (gorizontal), kVt·soat/m²</span><b>{num(s.irradiationKwhM2, 1)}</b></div>
         <div><span>PR (ma'lumot uchun)</span><b>{pr(s.performanceRatio)}</b></div>
         <div><span>Availability (kafolat {s.galPct}%)</span><b className={s.availabilityPct !== null && s.availabilityPct < s.galPct ? 'bad' : 'ok'}>{pct(s.availabilityPct)}</b></div>
         <div><span>Hodisalar</span><b>{s.incidents.total}</b></div>
@@ -108,7 +113,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
 
       <section>
         <h2>1. Elektr energiyasi ishlab chiqarish va nurlanish</h2>
-        <table>
+        <table className={keep(r.stations.length).trim()}>
           <thead>
             <tr>
               <th>Obyekt</th><th className="r">DC quvvat, kWp</th><th className="r">Energiya, kVt·soat</th>
@@ -136,7 +141,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
         {yearly && r.months && (
           <>
             <h3>Oylar bo'yicha</h3>
-            <table className="compact">
+            <table className="compact keep">
               <thead>
                 <tr>
                   <th>Oy</th><th className="r">Energiya, kVt·soat</th><th className="r">Nurlanish, kVt·soat/m²</th>
@@ -194,7 +199,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
 
       <section>
         <h2>2. Availability hisobi{yearly ? '' : " (ma'lumot uchun)"}</h2>
-        <table>
+        <table className={keep(r.stations.length).trim()}>
           <thead>
             <tr>
               <th>Obyekt</th><th className="r">Foydali vaqt, soat</th><th className="r">To'xtash, soat</th>
@@ -225,7 +230,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
         {yearly && r.months && (
           <>
             <h3>Oylar bo'yicha</h3>
-            <table className="compact">
+            <table className="compact keep">
               <thead>
                 <tr>
                   <th>Oy</th><th className="r">Foydali vaqt, soat</th><th className="r">To'xtash, soat</th>
@@ -248,7 +253,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
         {yearly && r.settlement && (
           <>
             <h3>Shartnoma yili bo'yicha hisob-kitob (8.2 va 8.3-bandlar)</h3>
-            <table className="meta">
+            <table className="meta keep">
               <tbody>
                 <tr><th>Yillik Availability</th><td><b>{pct(r.settlement.availabilityPct)}</b> (kafolatlangan daraja {s.galPct}%)</td></tr>
                 <tr>
@@ -279,12 +284,12 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
             Jami {chargeable.length} ta davr, {total(chargeable)} soat. To'liq ro'yxat oylik hisobotlarda va Excel faylida.
           </p>
         ) : chargeable.length ? (
-          <table className="compact">
+          <table className={`compact${keep(chargeable.length)}`}>
             <thead><tr><th>Obyekt</th><th>Invertor</th><th>Boshlandi</th><th>Tugadi</th><th className="r">Soat</th><th>Izoh</th></tr></thead>
             <tbody>
               {chargeable.map((p) => (
                 <tr key={`${p.sn}:${p.start}`}>
-                  <td>{p.station}</td><td>{p.sn}</td><td>{time(p.start)}</td><td>{time(p.end)}</td><td className="r">{hours(p.downMinutes)}</td>
+                  <td>{p.station}</td><td>{p.sn}</td><td className="nw">{time(p.start)}</td><td className="nw">{time(p.end)}</td><td className="r">{hours(p.downMinutes)}</td>
                   <td>{[p.silent ? "aloqa yo'q" : '', ...p.causes].filter(Boolean).join('; ') || '—'}</td>
                 </tr>
               ))}
@@ -300,12 +305,12 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
             Jami {excused.length} ta davr, {total(excused)} soat. To'liq ro'yxat oylik hisobotlarda va Excel faylida.
           </p>
         ) : excused.length ? (
-          <table className="compact">
+          <table className={`compact${keep(excused.length)}`}>
             <thead><tr><th>Obyekt</th><th>Invertor</th><th>Boshlandi</th><th>Tugadi</th><th className="r">Soat</th><th>Asos (Ilova 3, 2.1)</th></tr></thead>
             <tbody>
               {excused.map((p) => (
                 <tr key={`${p.sn}:${p.start}`}>
-                  <td>{p.station}</td><td>{p.sn}</td><td>{time(p.start)}</td><td>{time(p.end)}</td><td className="r">{hours(p.downMinutes)}</td>
+                  <td>{p.station}</td><td>{p.sn}</td><td className="nw">{time(p.start)}</td><td className="nw">{time(p.end)}</td><td className="r">{hours(p.downMinutes)}</td>
                   <td>{CATEGORY_UZ[p.category!]}</td>
                 </tr>
               ))}
@@ -362,9 +367,9 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
                   const b = clock(i.arrivalState, i.arrivalDueAt, i.arrivedAt);
                   return (
                     <tr key={i.id}>
-                      <td>{i.id}</td><td>{station(i)}</td><td>{INCIDENT_UZ[i.category].label}</td><td>{time(i.detectedAt)}</td>
-                      <td>{i.endedAt ? time(i.endedAt) : 'davom etmoqda'}</td>
-                      <td className={a.tone}>{a.text}{i.customerNotifiedAt && i.notifiedVia ? `, ${i.notifiedVia}` : ''}</td><td className={b.tone}>{b.text}</td>
+                      <td>{i.id}</td><td>{station(i)}</td><td>{INCIDENT_UZ[i.category].label}</td><td className="nw">{time(i.detectedAt)}</td>
+                      <td className="nw">{i.endedAt ? time(i.endedAt) : 'davom etmoqda'}</td>
+                      <Clock c={a} via={i.customerNotifiedAt ? i.notifiedVia : null} /><Clock c={b} />
                       <td>{(i.cause ?? '').replace(/^Avtomatik: /, '') || '—'}</td>
                     </tr>
                   );
