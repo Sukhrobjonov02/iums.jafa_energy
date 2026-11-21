@@ -66,6 +66,8 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
   // The hand-written sections are not part of a daily report, so its incidents come third.
   const no = day ? { incidents: 3 } : { maintenance: 3, incidents: 4, spareParts: 5, hse: 6, recommendations: 7 };
   const listed = <T,>(rows: T[]) => !yearly || rows.length <= YEAR_LIST_LIMIT;
+  // A plant with no energy figure on any day of the period has no total, which is not a zero.
+  const known = (st: { missingEnergyDays: number; days: unknown[] }) => st.missingEnergyDays < st.days.length;
   const total = (rows: { downMinutes: number }[]) => hours(rows.reduce((n, p) => n + p.downMinutes, 0));
   const perStation = r.stations.length > 1 && r.stations.length <= 4;
   const chargeable = r.downtime.filter((p) => p.category === null);
@@ -116,8 +118,8 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
           <tbody>
             {r.stations.map((st) => (
               <tr key={`${st.provider}:${st.stationId}`}>
-                <td>{st.name}</td><td className="r">{num(st.dcKwp, 2)}</td><td className="r">{num(st.energyKwh, 0)}</td>
-                <td className="r">{num(st.irradiationKwhM2, 1)}</td><td className="r">{num(st.specificYield, 1)}</td><td className="r">{pr(st.performanceRatio)}</td>
+                <td>{st.name}</td><td className="r">{num(st.dcKwp, 2)}</td><td className="r">{num(known(st) ? st.energyKwh : null, 0)}</td>
+                <td className="r">{num(st.irradiationKwhM2, 1)}</td><td className="r">{num(known(st) ? st.specificYield : null, 1)}</td><td className="r">{pr(st.performanceRatio)}</td>
               </tr>
             ))}
           </tbody>
@@ -362,7 +364,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
                     <tr key={i.id}>
                       <td>{i.id}</td><td>{station(i)}</td><td>{INCIDENT_UZ[i.category].label}</td><td>{time(i.detectedAt)}</td>
                       <td>{i.endedAt ? time(i.endedAt) : 'davom etmoqda'}</td>
-                      <td className={a.tone}>{a.text}{i.notifiedVia ? `, ${i.notifiedVia}` : ''}</td><td className={b.tone}>{b.text}</td>
+                      <td className={a.tone}>{a.text}{i.customerNotifiedAt && i.notifiedVia ? `, ${i.notifiedVia}` : ''}</td><td className={b.tone}>{b.text}</td>
                       <td>{(i.cause ?? '').replace(/^Avtomatik: /, '') || '—'}</td>
                     </tr>
                   );
