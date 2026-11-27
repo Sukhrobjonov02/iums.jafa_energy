@@ -31,11 +31,12 @@ import { availabilityService } from '../../../service/availability.service';
 import { useAuth } from '../../../helpers/hooks/useAuth';
 import { providerTag } from '../availability/provider-tag';
 import { IncidentsCard } from './incidents-card';
-import { CATEGORY_UZ } from './om-labels';
+import { CATEGORY_UZ, DIRECTIONS, planesLabel } from './om-labels';
 import type {
   ExcusableCategory,
   OmAvailabilityReport,
   OmContract,
+  OmContractStation,
   OmDowntimePeriod,
   OmExcusableEvent,
   OmInverterResult,
@@ -175,6 +176,65 @@ const InverterBlock: React.FC<{ inv: OmInverterResult; labels: Record<ExcusableC
   </div>
 );
 
+/** One group of panels as the form holds it; the share is in percent and only asked when there are several. */
+interface PlaneRow {
+  tiltDeg: number | null;
+  azimuthDeg: number;
+  sharePct: number | null;
+}
+
+const PlanesEditor: React.FC<{ name: string; rows: PlaneRow[]; onChange: (rows: PlaneRow[]) => void }> = ({ name, rows, onChange }) => {
+  const set = (i: number, patch: Partial<PlaneRow>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  // A direction saved as a plain number of degrees still has to show.
+  const options = (az: number) => (DIRECTIONS.some((d) => d.value === az) ? DIRECTIONS : [...DIRECTIONS, { value: az, label: `Azimut ${az}°` }]);
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <Space wrap size={8} align="center">
+        <Typography.Text strong style={{ minWidth: 160, display: 'inline-block' }}>{name}</Typography.Text>
+        {rows.length === 0 && <Typography.Text type="secondary">kiritilmagan (gorizontal)</Typography.Text>}
+        <Button size="small" icon={<PlusOutlined />} onClick={() => onChange([...rows, { tiltDeg: null, azimuthDeg: 0, sharePct: null }])}>
+          {rows.length ? "Yana yo'nalish" : 'Qiyalikni kiritish'}
+        </Button>
+      </Space>
+      {rows.map((r, i) => (
+        <Space key={i} wrap size={8} style={{ display: 'flex', marginTop: 6 }}>
+          <InputNumber
+            aria-label={`${name}: qiyalik`}
+            value={r.tiltDeg}
+            min={0}
+            max={90}
+            step={1}
+            addonAfter="°"
+            placeholder="Qiyalik"
+            style={{ width: 130 }}
+            onChange={(v) => set(i, { tiltDeg: v })}
+          />
+          <Select
+            aria-label={`${name}: yo'nalish`}
+            value={r.azimuthDeg}
+            options={options(r.azimuthDeg)}
+            style={{ width: 160 }}
+            onChange={(v) => set(i, { azimuthDeg: v })}
+          />
+          {rows.length > 1 && (
+            <InputNumber
+              aria-label={`${name}: ulush`}
+              value={r.sharePct}
+              min={1}
+              max={100}
+              addonAfter="%"
+              placeholder="Ulush"
+              style={{ width: 120 }}
+              onChange={(v) => set(i, { sharePct: v })}
+            />
+          )}
+          <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="O'chirish" onClick={() => onChange(rows.filter((_, j) => j !== i))} />
+        </Space>
+      ))}
+    </div>
+  );
+};
+
 const ContractModal: React.FC<{
   open: boolean;
   contract: OmContract | null;
@@ -184,10 +244,20 @@ const ContractModal: React.FC<{
 }> = ({ open, contract, stations, onClose, onSaved }) => {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [planes, setPlanes] = useState<Record<string, PlaneRow[]>>({});
+  const stationKeys: string[] = Form.useWatch('stationKeys', form) ?? [];
 
   useEffect(() => {
     if (!open) return;
     form.resetFields();
+    setPlanes(
+      Object.fromEntries(
+        (contract?.stations ?? []).map((s) => [
+          key(s),
+          (s.planes ?? []).map((p) => ({ tiltDeg: p.tiltDeg, azimuthDeg: p.azimuthDeg === -180 ? 180 : p.azimuthDeg, sharePct: Math.round(p.share * 1000) / 10 })),
+        ]),
+      ),
+    );
     if (contract) {
       form.setFieldsValue({
         ...contract,
@@ -204,10 +274,23 @@ const ContractModal: React.FC<{
   const submit = async () => {
     const v = await form.validateFields();
     const previous = new Map((contract?.stations ?? []).map((s) => [key(s), s]));
-    const list = (v.stationKeys as string[]).map((k) => {
+    const list: OmContractStation[] = [];
+    for (const k of v.stationKeys as string[]) {
       const [provider, ...rest] = k.split(':');
-      return previous.get(k) ?? { provider: provider as VendorKey, stationId: rest.join(':') };
-    });
+      const rows = planes[k] ?? [];
+      if (rows.some((p) => p.tiltDeg === null)) {
+        message.error('Panel qiyaligini kiriting yoki bo\'sh qatorni o\'chiring');
+        return;
+      }
+      if (rows.length > 1 && rows.some((p) => !p.sharePct)) {
+        message.error('Bir nechta yo\'nalish bo\'lsa, har birining ulushini kiriting');
+        return;
+      }
+      list.push({
+        ...(previous.get(k) ?? { provider: provider as VendorKey, stationId: rest.join(':') }),
+        planes: rows.length ? rows.map((p) => ({ tiltDeg: p.tiltDeg as number, azimuthDeg: p.azimuthDeg, share: rows.length > 1 ? (p.sharePct as number) : 1 })) : undefined,
+      });
+    }
     const split = (s?: string) => (s ?? '').split(',').map((x) => x.trim()).filter(Boolean);
     setSaving(true);
     try {
@@ -272,6 +355,25 @@ const ContractModal: React.FC<{
               />
             </Form.Item>
           </Col>
+          {stationKeys.length > 0 && (
+            <Col span={24}>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 4 }}>Panellar qiyaligi va yo'nalishi</div>
+                <Typography.Text type="secondary" style={{ display: 'block', fontSize: 12, marginBottom: 8 }}>
+                  Kiritilsa, hisobotdagi PR panel tekisligiga tushgan nurlanish bo'yicha hisoblanadi. Bo'sh qolsa, gorizontal nurlanish bo'yicha
+                  (qishda PR 100% dan oshib ketishi mumkin). Panellar ikki tomonga qaragan bo'lsa, ikkala yo'nalishni ulushi bilan qo'shing.
+                </Typography.Text>
+                {stationKeys.map((k) => (
+                  <PlanesEditor
+                    key={k}
+                    name={stations.find((s) => key(s) === k)?.name ?? k}
+                    rows={planes[k] ?? []}
+                    onChange={(rows) => setPlanes((all) => ({ ...all, [k]: rows }))}
+                  />
+                ))}
+              </div>
+            </Col>
+          )}
           <Col xs={24} md={12}>
             <Form.Item name="annualPriceUzs" label="Yillik narx, so'm, QQSsiz (9.1-band)">
               <InputNumber style={{ width: '100%' }} min={0} step={1_000_000} />
@@ -441,6 +543,8 @@ const OmPage: React.FC = () => {
   const [searching, setSearching] = useState(false);
 
   const contract = contracts.find((c) => c.id === selected) ?? null;
+  const planeOf = (st: { provider: string; stationId: string }) =>
+    planesLabel(contract?.stations.find((c) => c.provider === st.provider && c.stationId === st.stationId)?.planes);
 
   useEffect(() => {
     Promise.all([omService.contracts(), omService.categories(), availabilityService.getReport()])
@@ -535,6 +639,7 @@ const OmPage: React.FC = () => {
             {providerTag(st.provider)}
             <Text type="secondary" style={{ fontSize: 12 }}>
               {st.dcKwp} kWp, {st.inverters.length} ta invertor
+              {planeOf(st) ? `, panellar ${planeOf(st)}` : ''}
             </Text>
           </Space>
         </Space>
