@@ -16,11 +16,23 @@ export type ExcusableCategory =
   | 'epc_defect'
   | 'suspension';
 
+/** One group of panels facing the same way. */
+export interface OmPanelPlane {
+  /** 0 is flat, 90 is a wall. */
+  tiltDeg: number;
+  /** 0 south, -90 east, 90 west, 180 north. */
+  azimuthDeg: number;
+  /** This plane's part of the plant's capacity; the server brings the parts to a sum of 1. */
+  share: number;
+}
+
 export interface OmContractStation {
   provider: VendorKey;
   stationId: string;
   dcKwp?: number;
   inverterKwp?: Record<string, number>;
+  /** With it the reports' PR is against the sun on the panels' plane, without it horizontal. */
+  planes?: OmPanelPlane[];
 }
 
 export interface OmContract {
@@ -208,6 +220,11 @@ export interface OmReportStation {
   performanceRatio: number | null;
   missingEnergyDays: number;
   missingIrradiationDays: number;
+  planes?: OmPanelPlane[] | null;
+  /** The plane the irradiation, and so the PR, is on. */
+  irradiationPlane?: 'tilted' | 'horizontal';
+  satelliteDays?: number;
+  modelDays?: number;
 }
 
 export interface OmReportDowntime {
@@ -273,6 +290,8 @@ export interface OmPeriodReport {
   to: string;
   /** The period's own last day, reached or not. */
   periodTo: string;
+  /** The panels' own plane, horizontal, or some plants each. */
+  irradiationPlane?: 'tilted' | 'horizontal' | 'mixed';
   complete: boolean;
   generatedAt: string;
   summary: {

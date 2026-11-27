@@ -25,3 +25,26 @@ export const INCIDENT_UZ: Record<IncidentCategory, { label: string; color: strin
   minor: { label: "30% dan kam yo'qotish", color: 'gold', clocks: 'xabar 8 soat, yetib borish 48 soat (ish vaqti)' },
   noncritical: { label: 'Kritik emas', color: 'default', clocks: 'xabar 24 soat, keyingi rejali tashrifda' },
 };
+
+/** Where panels face, as the server counts it: 0 south, -90 east, 90 west, 180 north. */
+export const DIRECTIONS: { value: number; label: string }[] = [
+  { value: 0, label: 'Janub' },
+  { value: -45, label: 'Janubi-sharq' },
+  { value: -90, label: 'Sharq' },
+  { value: 45, label: "Janubi-g'arb" },
+  { value: 90, label: "G'arb" },
+  { value: -135, label: 'Shimoli-sharq' },
+  { value: 135, label: "Shimoli-g'arb" },
+  { value: 180, label: 'Shimol' },
+];
+
+/** "23° janub", or "10° sharq (60%), 10° g'arb (40%)" for a plant with several planes. */
+export function planesLabel(planes?: { tiltDeg: number; azimuthDeg: number; share: number }[] | null): string {
+  if (!planes?.length) return '';
+  const one = (p: { tiltDeg: number; azimuthDeg: number }) => {
+    if (p.tiltDeg === 0) return '0°';
+    const d = DIRECTIONS.find((x) => x.value === (p.azimuthDeg === -180 ? 180 : p.azimuthDeg));
+    return `${p.tiltDeg}° ${d ? d.label.toLowerCase() : `azimut ${p.azimuthDeg}°`}`;
+  };
+  return planes.map((p) => (planes.length > 1 ? `${one(p)} (${Math.round(p.share * 100)}%)` : one(p))).join(', ');
+}

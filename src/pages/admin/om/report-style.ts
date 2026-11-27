@@ -39,6 +39,7 @@ export const REPORT_CSS = `
 .om-report .note { margin: 4px 0 8px; white-space: pre-wrap; }
 .om-report .note.empty { color: #9aa5b1; font-style: italic; }
 .om-report .foot { color: #52606d; font-size: 10.5px; margin: 4px 0 0; }
+.om-report small.plane { color: #52606d; font-size: 10px; white-space: nowrap; }
 .om-report .signatures { display: flex; gap: 40px; margin-top: 40px; page-break-inside: avoid; }
 .om-report .signatures div { flex: 1; }
 .om-report .signatures span { display: block; margin-top: 28px; }

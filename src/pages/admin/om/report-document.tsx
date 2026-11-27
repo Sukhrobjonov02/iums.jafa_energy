@@ -1,6 +1,6 @@
 import React from 'react';
 import type { DeadlineState, OmIncident, OmPeriodReport } from '../../../types/om';
-import { CATEGORY_UZ, INCIDENT_UZ } from './om-labels';
+import { CATEGORY_UZ, INCIDENT_UZ, planesLabel } from './om-labels';
 import { MONTHS_UZ, reportTitle } from './report-style';
 
 const TASHKENT_MS = 5 * 3_600_000;
@@ -66,6 +66,8 @@ const Remark: React.FC<{ text: string | null }> = ({ text }) => (text ? <p class
  */
 export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPeriodReport }>(({ report: r }, ref) => {
   const s = r.summary;
+  // A report from a server that does not name the plane yet is horizontal, as all were.
+  const plane = r.irradiationPlane ?? 'horizontal';
   const day = r.period === 'day';
   const yearly = r.period === 'year';
   const title = reportTitle(r);
@@ -117,8 +119,8 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
 
       <section className="tiles">
         <div><span>Ishlab chiqarilgan energiya, kVt·soat</span><b>{num(s.energyKwh, 0)}</b></div>
-        <div><span>Nurlanish (gorizontal), kVt·soat/m²</span><b>{num(s.irradiationKwhM2, 1)}</b></div>
-        <div><span>PR (ma'lumot uchun)</span><b>{pr(s.performanceRatio)}</b></div>
+        <div><span>Nurlanish{{ tilted: ' (panel tekisligida)', horizontal: ' (gorizontal)', mixed: '' }[plane]}, kVt·soat/m²</span><b>{num(s.irradiationKwhM2, 1)}</b></div>
+        <div><span>{plane === 'tilted' ? 'PR' : "PR (ma'lumot uchun)"}</span><b>{pr(s.performanceRatio)}</b></div>
         <div><span>Availability (kafolat {s.galPct}%)</span><b className={s.availabilityPct !== null && s.availabilityPct < s.galPct ? 'bad' : 'ok'}>{pct(s.availabilityPct)}</b></div>
         <div><span>Hodisalar</span><b>{s.incidents.total}</b></div>
       </section>
@@ -135,7 +137,7 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
           <tbody>
             {r.stations.map((st) => (
               <tr key={`${st.provider}:${st.stationId}`}>
-                <td>{st.name}</td><td className="r">{num(st.dcKwp, 2)}</td><td className="r">{num(known(st) ? st.energyKwh : null, 0)}</td>
+                <td>{st.name}{st.planes?.length ? <small className="plane"> · panellar {planesLabel(st.planes)}</small> : null}</td><td className="r">{num(st.dcKwp, 2)}</td><td className="r">{num(known(st) ? st.energyKwh : null, 0)}</td>
                 <td className="r">{num(st.irradiationKwhM2, 1)}</td><td className="r">{num(known(st) ? st.specificYield : null, 1)}</td><td className="r">{pr(st.performanceRatio)}</td>
               </tr>
             ))}
@@ -204,8 +206,15 @@ export const ReportDocument = React.forwardRef<HTMLDivElement, { report: OmPerio
         )}
         <p className="foot">
           Energiya: invertor ishlab chiqaruvchisi bulutining kunlik hisoboti. Nurlanish: obyekt joylashuvi uchun sun'iy yo'ldosh ma'lumoti
-          (Open-Meteo), gorizontal tekislikda. PR = energiya ÷ (nurlanish × DC quvvat); nurlanish panel tekisligida o'lchanmagani uchun
-          ma'lumot tariqasida beriladi. "—" ma'lumot yo'qligini bildiradi.
+          (Open-Meteo), {{
+            tilted: "panellarning qiyaligi va yo'nalishi bo'yicha panel tekisligiga hisoblangan",
+            horizontal: 'gorizontal tekislikda',
+            mixed: "panel qiyaligi kiritilgan obyektlarda panel tekisligiga hisoblangan, qolganlarida gorizontal tekislikda",
+          }[plane]}. PR = energiya ÷ (nurlanish × DC quvvat)
+          {plane === 'tilted'
+            ? '; obyektda nurlanish datchigi (piranometr) yo\'qligi sababli nurlanish o\'lchanmagan, sun\'iy yo\'ldoshdan olingan.'
+            : "; gorizontal nurlanish bo'yicha PR ma'lumot tariqasida beriladi, qiya panellarda qishda 100% dan oshishi mumkin."}
+          {' '}"—" ma'lumot yo'qligini bildiradi.
         </p>
       </section>
 
